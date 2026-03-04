@@ -16,6 +16,6 @@ public class ListingController {
     @GetMapping("/listing/list")
     public String showCatalog(Model model) {
         model.addAttribute("listings", service.getAllListings());
-        return "listingList";
+        return "listingList.html";
     }
 }
