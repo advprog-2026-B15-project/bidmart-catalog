@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: bidmartcatalog
+
+  config:
+    import: optional:file:.env[.properties]
+  # Konfigurasi Database menggunakan Environment Variables
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/bidmart_catalog}
+    username: ${DB_USERNAME:postgres}
+    password: ${MY_SECRET_DB_PASS}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate # Flyway yang akan mengurus pembuatan tabel
+    show-sql: ${SHOW_SQL:true} # Bisa dimatikan di AWS nanti
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true

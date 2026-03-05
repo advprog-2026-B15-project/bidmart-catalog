@@ -1,10 +1,11 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.model;
 
-import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -20,21 +21,33 @@ public class Listing {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(nullable = false)
     private String title;
 
     @Column(length = 2000)
     private String description;
 
-    private String category;
+    // Relasi ke Category
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
+    // Relasi ke ListingImage
+    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ListingImage> images = new ArrayList<>();
+
+    @Column(nullable = false)
     private String sellerId;
 
+    @Column(nullable = false)
     private Double startingPrice;
 
     private Double currentPrice;
 
     private Double reservePrice;
 
+    @Column(nullable = false)
     private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
@@ -44,5 +57,4 @@ public class Listing {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
-
 }
