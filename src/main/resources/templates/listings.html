@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>BidMart Catalog</title>
+</head>
+
+<body>
+
+<h1>Listings</h1>
+
+<a href="/listings/create">Create Listing</a>
+
+<table border="1">
+
+    <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Starting Price</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    <tr th:each="listing : ${listings}">
+
+        <td th:text="${listing.title}"></td>
+        <td th:text="${listing.category}"></td>
+        <td th:text="${listing.startingPrice}"></td>
+        <td th:text="${listing.status}"></td>
+
+        <td>
+            <form th:action="@{/listings/{id}/publish(id=${listing.id})}" method="post">
+                <button type="submit">Publish</button>
+            </form>
+        </td>
+
+    </tr>
+
+</table>
+
+<br>
+
+<div>
+    <a th:if="${currentPage > 0}"
+       th:href="@{/listings(page=${currentPage - 1})}">
+        Previous
+    </a>
+
+    <span th:text="${currentPage + 1}"></span>
+
+    <a th:if="${currentPage + 1 < totalPages}"
+       th:href="@{/listings(page=${currentPage + 1})}">
+        Next
+    </a>
+</div>
+
+</body>
+</html>

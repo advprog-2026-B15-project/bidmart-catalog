@@ -53,13 +53,11 @@ public class ListingService {
 
         Listing listing = getListingById(id);
 
-        if (listing.getStatus() != ListingStatus.DRAFT) {
-            throw new RuntimeException("Listing cannot be published");
+        if (listing.getStatus() == ListingStatus.DRAFT) {
+            listing.setStatus(ListingStatus.ACTIVE);
+            return listingRepository.save(listing);
         }
 
-        listing.setStatus(ListingStatus.ACTIVE);
-
-        return listingRepository.save(listing);
+        return listing; // tidak melakukan apa-apa jika sudah ACTIVE
     }
-
 }

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Create Listing</title>
+</head>
+
+<body>
+
+<h1>Create Listing</h1>
+
+<form th:action="@{/listings/create}" method="post" th:object="${listing}">
+
+    Title
+    <input type="text" th:field="*{title}">
+    <br><br>
+
+    Description
+    <input type="text" th:field="*{description}">
+    <br><br>
+
+    Category
+    <input type="text" th:field="*{category}">
+    <br><br>
+
+    Starting Price
+    <input type="number" step="0.01" th:field="*{startingPrice}">
+    <br><br>
+
+    Reserve Price
+    <input type="number" step="0.01" th:field="*{reservePrice}">
+    <br><br>
+
+    Seller Id
+    <input type="text" th:field="*{sellerId}">
+    <br><br>
+
+    <button type="submit">Create Listing</button>
+
+</form>
+
+<br>
+
+<a href="/listings">Back to Listings</a>
+
+</body>
+</html>
