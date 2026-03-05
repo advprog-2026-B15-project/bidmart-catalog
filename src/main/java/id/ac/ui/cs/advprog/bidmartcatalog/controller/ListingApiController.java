@@ -59,15 +59,15 @@ public class ListingApiController {
 
     /**
      * Endpoint: GET /api/listings
-     * Digunakan untuk mengambil katalog publik dalam bentuk JSON (mendukung paginasi)
+     * Digunakan untuk mengambil katalog publik dalam bentuk JSON (Hanya status ACTIVE)
      */
     @GetMapping
     public ResponseEntity<Page<Listing>> getAllListings(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        // Memanfaatkan service yang sudah kamu buat sebelumnya
-        Page<Listing> listings = listingService.getAllListings(PageRequest.of(page, size));
-        return ResponseEntity.ok(listings);
+        // MODIFIKASI: Sekarang hanya mengambil yang ACTIVE sesuai API Contract
+        Page<Listing> activeListings = listingService.getActiveListings(PageRequest.of(page, size));
+        return ResponseEntity.ok(activeListings);
     }
 }

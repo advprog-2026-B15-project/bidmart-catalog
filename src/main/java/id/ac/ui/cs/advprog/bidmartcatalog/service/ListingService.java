@@ -20,13 +20,43 @@ public class ListingService {
     }
 
     /**
-     * Create a new listing
+     * Create a new listing dengan dukungan multi-gambar
      */
-    public Listing createListing(Listing listing) {
-
+    public Listing createListing(Listing listing, org.springframework.web.multipart.MultipartFile[] files) {
         listing.setStatus(ListingStatus.DRAFT);
         listing.setCurrentPrice(listing.getStartingPrice());
-        listing.setCreatedAt(LocalDateTime.now());
+        listing.setCreatedAt(java.time.LocalDateTime.now());
+
+        // Logika untuk menyimpan file gambar
+        if (files != null && files.length > 0) {
+            java.io.File uploadDir = new java.io.File("uploads/");
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs(); // Buat folder jika belum ada
+            }
+
+            boolean isPrimary = true;
+            for (org.springframework.web.multipart.MultipartFile file : files) {
+                if (file.isEmpty()) continue;
+
+                // Buat nama file unik agar tidak bentrok
+                String fileName = java.util.UUID.randomUUID() + "_" + file.getOriginalFilename();
+                try {
+                    java.nio.file.Path path = java.nio.file.Paths.get(uploadDir.getAbsolutePath(), fileName);
+                    java.nio.file.Files.write(path, file.getBytes());
+
+                    // Hubungkan gambar dengan listing
+                    id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage image = new id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage();
+                    image.setImageUrl("/uploads/" + fileName);
+                    image.setPrimary(isPrimary);
+                    image.setListing(listing); // Relasi ke parent
+
+                    listing.getImages().add(image);
+                    isPrimary = false; // Gambar pertama otomatis jadi primary
+                } catch (java.io.IOException e) {
+                    throw new RuntimeException("Gagal menyimpan file gambar", e);
+                }
+            }
+        }
 
         return listingRepository.save(listing);
     }
@@ -74,5 +104,12 @@ public class ListingService {
         }
 
         throw new IllegalArgumentException("Penawaran baru harus lebih tinggi dari harga saat ini");
+    }
+
+    /**
+     * Mengambil daftar listing yang HANYA berstatus ACTIVE (untuk API Publik)
+     */
+    public org.springframework.data.domain.Page<Listing> getActiveListings(org.springframework.data.domain.Pageable pageable) {
+        return listingRepository.findByStatus(id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus.ACTIVE, pageable);
     }
 }

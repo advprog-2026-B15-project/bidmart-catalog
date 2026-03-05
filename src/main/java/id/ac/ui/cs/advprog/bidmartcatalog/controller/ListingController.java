@@ -9,6 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -46,8 +47,10 @@ public class ListingController {
     }
 
     @PostMapping("/create")
-    public String createListing(@ModelAttribute Listing listing) {
-        listingService.createListing(listing);
+    public String createListing(@ModelAttribute Listing listing,
+                                @RequestParam(value = "imageFiles", required = false) MultipartFile[] files) {
+        // Panggil service yang baru diupdate
+        listingService.createListing(listing, files);
         return "redirect:/listings";
     }
 
@@ -60,5 +63,15 @@ public class ListingController {
             redirectAttributes.addFlashAttribute("error", "Listing cannot be published");
         }
         return "redirect:/listings";
+    }
+
+    /**
+     * Tampilkan Halaman Detail Listing
+     */
+    @GetMapping("/{id}")
+    public String getListingDetail(@PathVariable UUID id, Model model) {
+        Listing listing = listingService.getListingById(id);
+        model.addAttribute("listing", listing);
+        return "listing-detail";
     }
 }
