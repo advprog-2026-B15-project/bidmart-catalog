@@ -60,4 +60,19 @@ public class ListingService {
 
         return listing; // tidak melakukan apa-apa jika sudah ACTIVE
     }
+
+    /**
+     * Memperbarui harga terkini (currentPrice) saat ada penawaran baru dari Modul Lelang
+     */
+    public Listing updateCurrentPrice(UUID id, Double newPrice) {
+        Listing listing = getListingById(id);
+
+        // Validasi sederhana: Harga baru harus lebih besar dari harga saat ini
+        if (newPrice > listing.getCurrentPrice()) {
+            listing.setCurrentPrice(newPrice);
+            return listingRepository.save(listing);
+        }
+
+        throw new IllegalArgumentException("Penawaran baru harus lebih tinggi dari harga saat ini");
+    }
 }
