@@ -35,7 +35,7 @@
             </p>
         </div>
 
-        <form class="mt-8 space-y-6" th:action="@{/listings/create}" th:object="${listing}" method="POST">
+        <form class="mt-8 space-y-6" th:action="@{/listings/create}" th:object="${listing}" method="POST" enctype="multipart/form-data">
 
             <input type="hidden" th:field="*{sellerId}" value="dummy-seller-id-123" />
 
@@ -106,6 +106,25 @@
 
             </div>
 
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Foto Barang (Bisa lebih dari 1) <span class="text-red-500">*</span></label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-blue-500 transition-colors bg-gray-50">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600 justify-center">
+                            <label for="imageFiles" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                                <span id="upload-text">Pilih file</span> <input id="imageFiles" name="imageFiles" type="file" class="sr-only" multiple accept="image/*" required>
+                            </label>
+                            <p class="pl-1 text-gray-500">atau drag and drop</p>
+                        </div>
+                        <p class="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                    </div>
+                </div>
+                <div id="imagePreviewContainer" class="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-4"></div>
+            </div>
+
             <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
                 <a th:href="@{/listings}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                     Batal
@@ -117,6 +136,38 @@
         </form>
     </div>
 </main>
+
+<script>
+    const fileInput = document.getElementById('imageFiles');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const uploadText = document.getElementById('upload-text');
+
+    fileInput.addEventListener('change', function() {
+        // Kosongkan wadah preview jika user memilih ulang file
+        previewContainer.innerHTML = '';
+
+        const files = this.files;
+
+        if (files.length > 0) {
+            // Ubah teks tombol menjadi jumlah file yang dipilih
+            uploadText.textContent = files.length + ' gambar dipilih';
+
+            // Looping setiap gambar dan buat elemen <img> untuk ditampilkan
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    // URL.createObjectURL membaca file dari RAM komputermu sementara
+                    img.src = URL.createObjectURL(file);
+                    img.className = 'h-24 w-24 object-cover rounded-md border border-gray-200 shadow-md';
+
+                    previewContainer.appendChild(img);
+                }
+            });
+        } else {
+            uploadText.textContent = 'Pilih file';
+        }
+    });
+</script>
 
 </body>
 </html>

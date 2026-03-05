@@ -16,6 +16,9 @@ spring:
     hibernate:
       ddl-auto: validate # Flyway yang akan mengurus pembuatan tabel
     show-sql: ${SHOW_SQL:true} # Bisa dimatikan di AWS nanti
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
 
   flyway:
     enabled: true

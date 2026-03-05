@@ -78,9 +78,9 @@
                 </div>
 
                 <div class="mt-4 flex space-x-2">
-                    <button class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-lg text-sm font-semibold transition-colors">
+                    <a th:href="@{/listings/{id}(id=${listing.id})}" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-lg text-sm font-semibold transition-colors text-center inline-block">
                         Detail
-                    </button>
+                    </a>
 
                     <form th:if="${listing.status.name() == 'DRAFT'}"
                           th:action="@{/listings/{id}/publish(id=${listing.id})}"
