@@ -4,6 +4,8 @@ import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.Map;
 import java.util.UUID;
@@ -53,5 +55,19 @@ public class ListingApiController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * Endpoint: GET /api/listings
+     * Digunakan untuk mengambil katalog publik dalam bentuk JSON (mendukung paginasi)
+     */
+    @GetMapping
+    public ResponseEntity<Page<Listing>> getAllListings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        // Memanfaatkan service yang sudah kamu buat sebelumnya
+        Page<Listing> listings = listingService.getAllListings(PageRequest.of(page, size));
+        return ResponseEntity.ok(listings);
     }
 }
