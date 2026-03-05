@@ -7,6 +7,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
 
 import java.util.UUID;
 
@@ -60,8 +62,16 @@ public class ListingController {
      * Publish listing
      */
     @PostMapping("/{id}/publish")
-    public String publishListing(@PathVariable UUID id) {
-        listingService.publishListing(id);
+    public String publishListing(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+
+        try {
+            listingService.publishListing(id);
+            redirectAttributes.addFlashAttribute("message", "Listing published successfully");
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Listing cannot be published");
+        }
+
         return "redirect:/listings";
     }
 }
