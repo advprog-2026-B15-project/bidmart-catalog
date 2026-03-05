@@ -35,6 +35,12 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation(kotlin("stdlib-jdk8"))
+
+    // Tambahkan ini untuk memperbaiki error 'persistence'
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+
+    // Tambahkan database driver (misal H2 untuk development)
+    runtimeOnly("com.h2database:h2")
 }
 
 tasks.withType<Test> {

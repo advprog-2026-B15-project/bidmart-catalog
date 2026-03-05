@@ -1,19 +1,16 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.repository;
 
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
-import org.springframework.stereotype.Repository;
-import java.util.ArrayList;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.util.List;
+import java.util.UUID;
 
-@Repository
-public class ListingRepository {
-    private final List<Listing> listings = new ArrayList<>();
+public interface ListingRepository extends JpaRepository<Listing, UUID> {
 
-    public void save(Listing listing) {
-        listings.add(listing);
-    }
+    List<Listing> findBySellerId(String sellerId);
 
-    public List<Listing> findAll() {
-        return listings;
-    }
+    List<Listing> findByStatus(ListingStatus status);
+
 }
