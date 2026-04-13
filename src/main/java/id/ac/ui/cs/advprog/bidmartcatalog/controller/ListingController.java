@@ -1,8 +1,10 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.controller;
 
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
-import id.ac.ui.cs.advprog.bidmartcatalog.repository.CategoryRepository; // Tambahkan import ini
+import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
+import id.ac.ui.cs.advprog.bidmartcatalog.repository.CategoryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
@@ -11,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Controller
@@ -18,38 +22,61 @@ import java.util.UUID;
 public class ListingController {
 
     private final ListingService listingService;
-    private final CategoryRepository categoryRepository; // Tambahkan dependency ini
+    private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService; // Tambahan untuk logika rekursif kategori
 
-    // Perbarui Constructor untuk injeksi kedua dependency
-    public ListingController(ListingService listingService, CategoryRepository categoryRepository) {
+    // Perbarui Constructor
+    public ListingController(ListingService listingService, CategoryRepository categoryRepository, CategoryService categoryService) {
         this.listingService = listingService;
         this.categoryRepository = categoryRepository;
+        this.categoryService = categoryService;
     }
 
     @GetMapping
     public String getListings(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) ListingStatus status, // <-- TAMBAHAN: Tangkap status dari URL
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Model model) {
-        Page<Listing> listings = listingService.getAllListings(PageRequest.of(page, size));
+
+        List<UUID> categoryIds = new ArrayList<>();
+
+        if (categoryId != null) {
+            categoryIds = categoryService.getCategoryAndSubCategoryIds(categoryId);
+        }
+
+        // Masukkan status ke dalam pemanggilan Service
+        Page<Listing> listings = listingService.searchAndFilterListings(
+                title, categoryIds, minPrice, maxPrice, status, PageRequest.of(page, size));
+
         model.addAttribute("listings", listings.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", listings.getTotalPages());
+
+        model.addAttribute("title", title);
+        model.addAttribute("selectedCategoryId", categoryId);
+        model.addAttribute("selectedStatus", status); // <-- TAMBAHAN: Kembalikan ke HTML
+
+        model.addAttribute("categories", categoryRepository.findByParentCategoryIsNull());
+
         return "listings";
     }
 
     @GetMapping("/create")
     public String createListingForm(Model model) {
         model.addAttribute("listing", new Listing());
-        // Ambil semua kategori dari database dan kirim ke view HTML
-        model.addAttribute("categories", categoryRepository.findAll());
+        // PERBAIKAN: Hanya kirim kategori utama (Root) agar rapi, tidak muncul semua secara flat
+        model.addAttribute("categories", categoryRepository.findByParentCategoryIsNull());
         return "create-listing";
     }
 
     @PostMapping("/create")
     public String createListing(@ModelAttribute Listing listing,
                                 @RequestParam(value = "imageFiles", required = false) MultipartFile[] files) {
-        // Panggil service yang baru diupdate
         listingService.createListing(listing, files);
         return "redirect:/listings";
     }
@@ -65,9 +92,6 @@ public class ListingController {
         return "redirect:/listings";
     }
 
-    /**
-     * Tampilkan Halaman Detail Listing
-     */
     @GetMapping("/{id}")
     public String getListingDetail(@PathVariable UUID id, Model model) {
         Listing listing = listingService.getListingById(id);
@@ -80,37 +104,31 @@ public class ListingController {
         try {
             Listing listing = listingService.getListingById(id);
 
-            // Cek di awal apakah boleh diedit (bisa juga pakai method di entity: isEditable())
             if (listing.getBidCount() != null && listing.getBidCount() > 0) {
                 redirectAttributes.addFlashAttribute("error", "Tidak bisa mengedit: Sudah ada penawaran!");
                 return "redirect:/listings/" + id;
             }
 
             model.addAttribute("listing", listing);
-            model.addAttribute("categories", categoryRepository.findAll());
-            return "edit-listing"; // Pastikan Anda membuat file edit-listing.html
+            // PERBAIKAN: Hanya kirim kategori utama
+            model.addAttribute("categories", categoryRepository.findByParentCategoryIsNull());
+            return "edit-listing";
         } catch (RuntimeException e) {
             return "redirect:/listings";
         }
     }
 
-    /**
-     * TAMBAHAN: Menangkap submit dari form Edit
-     */
     @PostMapping("/{id}/edit")
     public String updateListing(@PathVariable UUID id, @ModelAttribute Listing listingUpdate, RedirectAttributes redirectAttributes) {
         try {
             listingService.updateListing(id, listingUpdate);
             redirectAttributes.addFlashAttribute("message", "Listing berhasil diupdate.");
         } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage()); // Menangkap pesan error dari Service
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/listings/" + id;
     }
 
-    /**
-     * TAMBAHAN: Menghapus listing (via form POST karena HTML forms belum support DELETE secara native tanpa JS)
-     */
     @PostMapping("/{id}/delete")
     public String deleteListing(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
@@ -118,10 +136,8 @@ public class ListingController {
             redirectAttributes.addFlashAttribute("message", "Listing berhasil dihapus.");
             return "redirect:/listings";
         } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage()); // Menampilkan error restriksi
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/listings/" + id;
         }
     }
-
-
 }

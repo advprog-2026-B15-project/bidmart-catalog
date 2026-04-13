@@ -83,7 +83,7 @@ public class ListingApiController {
         }
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
-                title, categoryIds, minPrice, maxPrice, PageRequest.of(page, size));
+                title, categoryIds, minPrice, maxPrice,null, PageRequest.of(page, size));
 
         return ResponseEntity.ok(searchResults);
     }

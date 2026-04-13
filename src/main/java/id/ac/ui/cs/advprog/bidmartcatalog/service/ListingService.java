@@ -135,10 +135,11 @@ public class ListingService {
             List<UUID> categoryIds,
             Double minPrice,
             Double maxPrice,
+            ListingStatus status, // <-- TAMBAHAN: Parameter Status
             Pageable pageable) {
 
-        // Memanggil Specification
-        Specification<Listing> spec = ListingSpecification.filterListings(title, categoryIds, minPrice, maxPrice);
+        // Teruskan status ke Specification
+        Specification<Listing> spec = ListingSpecification.filterListings(title, categoryIds, minPrice, maxPrice, status);
 
         return listingRepository.findAll(spec, pageable);
     }

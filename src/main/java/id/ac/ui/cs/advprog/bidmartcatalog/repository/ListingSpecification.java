@@ -5,7 +5,6 @@ import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -13,37 +12,44 @@ import java.util.UUID;
 public class ListingSpecification {
 
     public static Specification<Listing> filterListings(
-            String title,
+            String keyword,
             List<UUID> categoryIds,
             Double minPrice,
-            Double maxPrice) {
+            Double maxPrice,
+            ListingStatus status) { // <-- TAMBAHAN: Parameter Status
 
-        return (root, query, cb) -> {
+        return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 1. Filter Pencarian Judul (Case Insensitive)
-            if (title != null && !title.isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("title")), "%" + title.toLowerCase() + "%"));
+            // ====================================================
+            // PERBAIKAN: Filter Status sekarang jadi opsional
+            // ====================================================
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
             }
 
-            // 2. Filter Kategori (Hierarki: Mencari di parent maupun child)
+            // Filter Keyword
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String searchPattern = "%" + keyword.toLowerCase() + "%";
+                Predicate titleMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), searchPattern);
+                Predicate descMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), searchPattern);
+                predicates.add(criteriaBuilder.or(titleMatch, descMatch));
+            }
+
+            // Filter Kategori
             if (categoryIds != null && !categoryIds.isEmpty()) {
                 predicates.add(root.get("category").get("id").in(categoryIds));
             }
 
-            // 3. Filter Harga
+            // Filter Harga
             if (minPrice != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("currentPrice"), minPrice));
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("currentPrice"), minPrice));
             }
             if (maxPrice != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("currentPrice"), maxPrice));
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("currentPrice"), maxPrice));
             }
 
-            // 4. Filter Waktu (Hanya lelang yang masih berlangsung dan status ACTIVE)
-            predicates.add(cb.greaterThan(root.get("endTime"), LocalDateTime.now()));
-            predicates.add(cb.equal(root.get("status"), ListingStatus.ACTIVE));
-
-            return cb.and(predicates.toArray(new Predicate[0]));
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
 }

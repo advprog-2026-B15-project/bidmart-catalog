@@ -25,6 +25,7 @@ public class CategoryApiController {
      */
     @GetMapping
     public ResponseEntity<List<Category>> getAllCategories() {
-        return ResponseEntity.ok(categoryRepository.findAll());
+        List<Category> rootCategories = categoryRepository.findByParentCategoryIsNull();
+        return ResponseEntity.ok(rootCategories);
     }
 }
