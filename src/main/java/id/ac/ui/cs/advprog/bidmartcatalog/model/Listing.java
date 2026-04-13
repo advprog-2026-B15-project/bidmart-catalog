@@ -58,7 +58,7 @@ public class Listing {
 
     private LocalDateTime updatedAt;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "integer default 0")
     @Builder.Default
     private Integer bidCount = 0;
 
