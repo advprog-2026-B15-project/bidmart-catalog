@@ -1,12 +1,22 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.service;
 
-import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingRepository;
+import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingSpecification;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -23,37 +33,36 @@ public class ListingService {
     /**
      * Create a new listing dengan dukungan multi-gambar
      */
-    public Listing createListing(Listing listing, org.springframework.web.multipart.MultipartFile[] files) {
+    public Listing createListing(Listing listing, MultipartFile[] files) {
         listing.setStatus(ListingStatus.DRAFT);
         listing.setCurrentPrice(listing.getStartingPrice());
-        listing.setCreatedAt(java.time.LocalDateTime.now());
 
         // Logika untuk menyimpan file gambar
         if (files != null && files.length > 0) {
-            java.io.File uploadDir = new java.io.File("uploads/");
+            File uploadDir = new File("uploads/");
             if (!uploadDir.exists()) {
                 uploadDir.mkdirs(); // Buat folder jika belum ada
             }
 
             boolean isPrimary = true;
-            for (org.springframework.web.multipart.MultipartFile file : files) {
+            for (MultipartFile file : files) {
                 if (file.isEmpty()) continue;
 
                 // Buat nama file unik agar tidak bentrok
-                String fileName = java.util.UUID.randomUUID() + "_" + file.getOriginalFilename();
+                String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
                 try {
-                    java.nio.file.Path path = java.nio.file.Paths.get(uploadDir.getAbsolutePath(), fileName);
-                    java.nio.file.Files.write(path, file.getBytes());
+                    Path path = Paths.get(uploadDir.getAbsolutePath(), fileName);
+                    Files.write(path, file.getBytes());
 
                     // Hubungkan gambar dengan listing
-                    id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage image = new id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage();
+                    ListingImage image = new ListingImage();
                     image.setImageUrl("/uploads/" + fileName);
                     image.setPrimary(isPrimary);
                     image.setListing(listing); // Relasi ke parent
 
                     listing.getImages().add(image);
                     isPrimary = false; // Gambar pertama otomatis jadi primary
-                } catch (java.io.IOException e) {
+                } catch (IOException e) {
                     throw new RuntimeException("Gagal menyimpan file gambar", e);
                 }
             }
@@ -81,7 +90,6 @@ public class ListingService {
      * Publish listing (DRAFT → ACTIVE)
      */
     public Listing publishListing(UUID id) {
-
         Listing listing = getListingById(id);
 
         if (listing.getStatus() == ListingStatus.DRAFT) {
@@ -101,6 +109,11 @@ public class ListingService {
         // Validasi sederhana: Harga baru harus lebih besar dari harga saat ini
         if (newPrice > listing.getCurrentPrice()) {
             listing.setCurrentPrice(newPrice);
+
+            // Increment bid count setiap kali ada penawaran baru yang berhasil
+            int currentBidCount = listing.getBidCount() != null ? listing.getBidCount() : 0;
+            listing.setBidCount(currentBidCount + 1);
+
             return listingRepository.save(listing);
         }
 
@@ -110,10 +123,13 @@ public class ListingService {
     /**
      * Mengambil daftar listing yang HANYA berstatus ACTIVE (untuk API Publik)
      */
-    public org.springframework.data.domain.Page<Listing> getActiveListings(org.springframework.data.domain.Pageable pageable) {
-        return listingRepository.findByStatus(id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus.ACTIVE, pageable);
+    public Page<Listing> getActiveListings(Pageable pageable) {
+        return listingRepository.findByStatus(ListingStatus.ACTIVE, pageable);
     }
 
+    /**
+     * Fitur Pencarian dan Filter Dinamis
+     */
     public Page<Listing> searchAndFilterListings(
             String title,
             List<UUID> categoryIds,
@@ -121,10 +137,8 @@ public class ListingService {
             Double maxPrice,
             Pageable pageable) {
 
-        // Memanggil Specification yang baru kita buat
-        org.springframework.data.jpa.domain.Specification<Listing> spec =
-                id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingSpecification
-                        .filterListings(title, categoryIds, minPrice, maxPrice);
+        // Memanggil Specification
+        Specification<Listing> spec = ListingSpecification.filterListings(title, categoryIds, minPrice, maxPrice);
 
         return listingRepository.findAll(spec, pageable);
     }
@@ -145,9 +159,17 @@ public class ListingService {
             throw new IllegalStateException("Tidak dapat mengubah listing yang sudah ditutup.");
         }
 
-        // Lakukan update field (contoh)
+        // Lakukan update field yang diizinkan
         existingListing.setTitle(updateData.getTitle());
         existingListing.setDescription(updateData.getDescription());
+
+        if (updateData.getCategory() != null) {
+            existingListing.setCategory(updateData.getCategory());
+        }
+        if (updateData.getReservePrice() != null) {
+            existingListing.setReservePrice(updateData.getReservePrice());
+        }
+
         // Jangan lupa update field lainnya sesuai kebutuhan, tapi JANGAN ubah startingPrice
 
         return listingRepository.save(existingListing);
