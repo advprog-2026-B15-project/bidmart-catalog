@@ -75,5 +75,53 @@ public class ListingController {
         return "listing-detail";
     }
 
+    @GetMapping("/{id}/edit")
+    public String editListingForm(@PathVariable UUID id, Model model, RedirectAttributes redirectAttributes) {
+        try {
+            Listing listing = listingService.getListingById(id);
+
+            // Cek di awal apakah boleh diedit (bisa juga pakai method di entity: isEditable())
+            if (listing.getBidCount() != null && listing.getBidCount() > 0) {
+                redirectAttributes.addFlashAttribute("error", "Tidak bisa mengedit: Sudah ada penawaran!");
+                return "redirect:/listings/" + id;
+            }
+
+            model.addAttribute("listing", listing);
+            model.addAttribute("categories", categoryRepository.findAll());
+            return "edit-listing"; // Pastikan Anda membuat file edit-listing.html
+        } catch (RuntimeException e) {
+            return "redirect:/listings";
+        }
+    }
+
+    /**
+     * TAMBAHAN: Menangkap submit dari form Edit
+     */
+    @PostMapping("/{id}/edit")
+    public String updateListing(@PathVariable UUID id, @ModelAttribute Listing listingUpdate, RedirectAttributes redirectAttributes) {
+        try {
+            listingService.updateListing(id, listingUpdate);
+            redirectAttributes.addFlashAttribute("message", "Listing berhasil diupdate.");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage()); // Menangkap pesan error dari Service
+        }
+        return "redirect:/listings/" + id;
+    }
+
+    /**
+     * TAMBAHAN: Menghapus listing (via form POST karena HTML forms belum support DELETE secara native tanpa JS)
+     */
+    @PostMapping("/{id}/delete")
+    public String deleteListing(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            listingService.deleteListing(id);
+            redirectAttributes.addFlashAttribute("message", "Listing berhasil dihapus.");
+            return "redirect:/listings";
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage()); // Menampilkan error restriksi
+            return "redirect:/listings/" + id;
+        }
+    }
+
 
 }
