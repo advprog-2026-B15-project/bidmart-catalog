@@ -70,4 +70,6 @@ public class ListingApiController {
         Page<Listing> activeListings = listingService.getActiveListings(PageRequest.of(page, size));
         return ResponseEntity.ok(activeListings);
     }
+
+
 }

@@ -28,19 +28,24 @@ class CategoryApiControllerTest {
     private CategoryRepository categoryRepository;
 
     @Test
-    @DisplayName("GET /api/categories - Should return list of categories")
+    @DisplayName("GET /api/categories - Harus mengembalikan daftar kategori dalam format JSON")
     void testGetAllCategories() throws Exception {
-        Category cat1 = Category.builder().name("Racket").build();
-        Category cat2 = Category.builder().name("Shoes").build();
-        List<Category> allCategories = Arrays.asList(cat1, cat2);
+        // 1. Persiapkan data simulasi (Mock Data)
+        Category cat1 = Category.builder().name("Sepatu Bola").build();
+        Category cat2 = Category.builder().name("Jersey").build();
+        List<Category> categories = Arrays.asList(cat1, cat2);
 
-        when(categoryRepository.findAll()).thenReturn(allCategories);
+        // 2. Tentukan perilaku Mock
+        when(categoryRepository.findAll()).thenReturn(categories);
 
+        // 3. Jalankan request dan verifikasi hasilnya
         mockMvc.perform(get("/api/categories")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].name").value("Racket"))
-                .andExpect(jsonPath("$[1].name").value("Shoes"));
+                .andExpect(status().isOk()) // HTTP 200
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.length()").value(2)) // Jumlah elemen
+                .andExpect(jsonPath("$[0].name").value("Sepatu Bola"))
+                .andExpect(jsonPath("$[1].name").value("Jersey"));
     }
+
 }

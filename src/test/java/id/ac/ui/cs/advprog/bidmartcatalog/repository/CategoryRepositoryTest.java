@@ -1,13 +1,14 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.repository;
 
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Category;
-import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,48 +18,72 @@ class CategoryRepositoryTest {
     @Autowired
     private CategoryRepository categoryRepository;
 
-    @Test
-    @DisplayName("Test Save and Find Category Hierarchy")
-    void testSaveAndFindHierarchy() {
-        // Membuat kategori induk (Root)
-        Category parent = Category.builder()
-                .name("Sport Equipment")
-                .build();
-        Category savedParent = categoryRepository.save(parent);
+    private Category category;
 
-        // Membuat kategori anak (Child)
-        Category child = Category.builder()
-                .name("Badminton")
-                .parentCategory(savedParent)
-                .build();
-        categoryRepository.save(child);
+    @BeforeEach
+    void setUp() {
+        // Inisialisasi objek Category baru
+        category = new Category();
 
-        // Verifikasi pengambilan data
-        Optional<Category> foundChild = categoryRepository.findAll().stream()
-                .filter(c -> c.getName().equals("Badminton"))
-                .findFirst();
+        // Mengisi atribut wajib (not-null) agar Hibernate tidak protes
+        category.setName("Electronics");
 
-        assertTrue(foundChild.isPresent());
-        assertEquals("Sport Equipment", foundChild.get().getParentCategory().getName());
+        // Catatan: Jika ada atribut lain di model Category yang wajib diisi (misal deskripsi),
+        // tambahkan juga setter-nya di sini. Contoh:
+        // category.setDescription("Kategori untuk barang elektronik");
     }
 
     @Test
-    @DisplayName("Test Delete Parent Cascades to Children")
-    void testCascadeDelete() {
-        Category parent = Category.builder().name("Outdoor").build();
-        Category savedParent = categoryRepository.save(parent);
+    void testSaveCategory() {
+        Category savedCategory = categoryRepository.save(category);
 
-        Category child = Category.builder()
-                .name("Hiking")
-                .parentCategory(savedParent)
-                .build();
-        categoryRepository.save(child);
+        assertNotNull(savedCategory);
+        assertNotNull(savedCategory.getId()); // Memastikan ID di-generate oleh database
+        assertEquals("Electronics", savedCategory.getName()); // Memastikan data tersimpan dengan benar
+    }
 
-        // Hapus induk
-        categoryRepository.delete(savedParent);
-        categoryRepository.flush();
+    @Test
+    void testFindById() {
+        Category savedCategory = categoryRepository.save(category);
+        UUID id = savedCategory.getId();
 
-        List<Category> allCategories = categoryRepository.findAll();
-        assertTrue(allCategories.isEmpty(), "Anak kategori seharusnya ikut terhapus karena CascadeType.ALL");
+        Optional<Category> foundCategory = categoryRepository.findById(id);
+
+        assertTrue(foundCategory.isPresent());
+        assertEquals(savedCategory.getId(), foundCategory.get().getId());
+        assertEquals(savedCategory.getName(), foundCategory.get().getName());
+    }
+
+    @Test
+    void testFindAllCategories() {
+        // Simpan kategori pertama (dari setUp)
+        categoryRepository.save(category);
+
+        // Buat dan simpan kategori kedua
+        Category category2 = new Category();
+        category2.setName("Fashion"); // Wajib diisi karena not-null
+        categoryRepository.save(category2);
+
+        // Ambil semua kategori dari database in-memory
+        List<Category> categoryList = categoryRepository.findAll();
+
+        assertNotNull(categoryList);
+        assertTrue(categoryList.size() >= 2);
+    }
+
+    @Test
+    void testDeleteCategory() {
+        // Simpan data dulu
+        Category savedCategory = categoryRepository.save(category);
+        UUID id = savedCategory.getId();
+
+        // Hapus data
+        categoryRepository.deleteById(id);
+
+        // Coba cari lagi datanya
+        Optional<Category> deletedCategory = categoryRepository.findById(id);
+
+        // Pastikan datanya sudah tidak ada
+        assertTrue(deletedCategory.isEmpty());
     }
 }

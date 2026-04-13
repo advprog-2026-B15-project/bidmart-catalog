@@ -29,4 +29,9 @@ public class Category {
 
     @OneToMany(mappedBy = "parentCategory", cascade = CascadeType.ALL)
     private List<Category> subCategories;
+
+    public void addSubCategory(Category subCategory) {
+        subCategories.add(subCategory);
+        subCategory.setParentCategory(this);
+    }
 }

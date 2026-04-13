@@ -74,4 +74,6 @@ public class ListingController {
         model.addAttribute("listing", listing);
         return "listing-detail";
     }
+
+
 }
