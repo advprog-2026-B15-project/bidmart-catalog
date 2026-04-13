@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -111,5 +112,58 @@ public class ListingService {
      */
     public org.springframework.data.domain.Page<Listing> getActiveListings(org.springframework.data.domain.Pageable pageable) {
         return listingRepository.findByStatus(id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus.ACTIVE, pageable);
+    }
+
+    public Page<Listing> searchAndFilterListings(
+            String title,
+            List<UUID> categoryIds,
+            Double minPrice,
+            Double maxPrice,
+            Pageable pageable) {
+
+        // Memanggil Specification yang baru kita buat
+        org.springframework.data.jpa.domain.Specification<Listing> spec =
+                id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingSpecification
+                        .filterListings(title, categoryIds, minPrice, maxPrice);
+
+        return listingRepository.findAll(spec, pageable);
+    }
+
+    /**
+     * FITUR RESTRIKSI EDIT
+     */
+    public Listing updateListing(UUID id, Listing updateData) {
+        Listing existingListing = getListingById(id);
+
+        // Validasi: Tolak jika sudah ada bid
+        if (existingListing.getBidCount() != null && existingListing.getBidCount() > 0) {
+            throw new IllegalStateException("Tidak dapat mengubah listing. Penawaran (bid) sudah dilakukan.");
+        }
+
+        // Validasi: Tolak jika lelang sudah ditutup
+        if (existingListing.getStatus() == ListingStatus.CLOSED) {
+            throw new IllegalStateException("Tidak dapat mengubah listing yang sudah ditutup.");
+        }
+
+        // Lakukan update field (contoh)
+        existingListing.setTitle(updateData.getTitle());
+        existingListing.setDescription(updateData.getDescription());
+        // Jangan lupa update field lainnya sesuai kebutuhan, tapi JANGAN ubah startingPrice
+
+        return listingRepository.save(existingListing);
+    }
+
+    /**
+     * FITUR RESTRIKSI DELETE
+     */
+    public void deleteListing(UUID id) {
+        Listing existingListing = getListingById(id);
+
+        // Validasi yang sama dengan Edit
+        if (existingListing.getBidCount() != null && existingListing.getBidCount() > 0) {
+            throw new IllegalStateException("Tidak dapat menghapus listing karena sudah ada penawaran (bid).");
+        }
+
+        listingRepository.delete(existingListing);
     }
 }
