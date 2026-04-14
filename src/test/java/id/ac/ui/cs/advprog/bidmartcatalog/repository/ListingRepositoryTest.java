@@ -24,12 +24,16 @@ class ListingRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        // Tentukan waktu akhir, misal: 7 hari dari sekarang
+        java.time.LocalDateTime futureDate = java.time.LocalDateTime.now().plusDays(7);
+
         Listing listing1 = Listing.builder()
                 .title("Raket Badminton")
                 .sellerId(sellerId)
                 .status(ListingStatus.ACTIVE)
                 .startingPrice(500000.0)
                 .currentPrice(500000.0)
+                .endTime(futureDate) // TAMBAHKAN INI
                 .build();
 
         Listing listing2 = Listing.builder()
@@ -38,12 +42,12 @@ class ListingRepositoryTest {
                 .status(ListingStatus.DRAFT)
                 .startingPrice(750000.0)
                 .currentPrice(750000.0)
+                .endTime(futureDate) // TAMBAHKAN INI
                 .build();
 
         listingRepository.save(listing1);
         listingRepository.save(listing2);
     }
-
     @Test
     @DisplayName("Test findBySellerId - Should return all listings for a seller")
     void testFindBySellerId() {

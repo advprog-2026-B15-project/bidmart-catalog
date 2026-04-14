@@ -57,4 +57,20 @@ public class Listing {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
+    private Integer bidCount = 0;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (currentPrice == null) currentPrice = startingPrice;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

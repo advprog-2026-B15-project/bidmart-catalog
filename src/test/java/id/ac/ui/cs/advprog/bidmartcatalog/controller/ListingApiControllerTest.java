@@ -11,7 +11,19 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+// Import untuk List dan UUID
+import java.util.List;
+import java.util.UUID;
 
+// Import untuk Mockito (verify dan times)
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.when;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -79,5 +91,67 @@ class ListingApiControllerTest {
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Parameter 'newPrice' wajib diisi"));
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/{id} - Return 404 when RuntimeException occurs")
+    void testGetListingByIdNotFound() throws Exception {
+        UUID id = UUID.randomUUID();
+        // Simulasi Service melempar RuntimeException (misal: "Listing not found")
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not Found"));
+
+        mockMvc.perform(get("/api/listings/" + id))
+                .andExpect(status().isNotFound()); // Verifikasi return 404
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/current-price - Return 400 when IllegalArgumentException occurs")
+    void testUpdatePriceIllegalArgument() throws Exception {
+        UUID id = UUID.randomUUID();
+        Double lowerPrice = 50000.0;
+        String jsonPayload = "{\"newPrice\": 50000.0}";
+
+        // Simulasi harga baru lebih rendah dari harga saat ini
+        when(listingService.updateCurrentPrice(eq(id), eq(lowerPrice)))
+                .thenThrow(new IllegalArgumentException("Penawaran baru harus lebih tinggi"));
+
+        mockMvc.perform(patch("/api/listings/" + id + "/current-price")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isBadRequest()) // Verifikasi return 400
+                .andExpect(content().string("Penawaran baru harus lebih tinggi"));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/current-price - Return 404 on RuntimeException")
+    void testUpdatePriceRuntimeError() throws Exception {
+        UUID id = UUID.randomUUID();
+        String jsonPayload = "{\"newPrice\": 1000000.0}";
+
+        when(listingService.updateCurrentPrice(any(), any()))
+                .thenThrow(new RuntimeException("Database error or not found"));
+
+        mockMvc.perform(patch("/api/listings/" + id + "/current-price")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isNotFound()); // Verifikasi return 404
+    }
+
+    @Test
+    @DisplayName("GET /api/listings - Should return only ACTIVE listings")
+    void testGetAllActiveListings() throws Exception {
+        // Persiapkan mock Page
+        Page<Listing> activePage = new PageImpl<>(List.of(new Listing()));
+
+        when(listingService.getActiveListings(any(PageRequest.class))).thenReturn(activePage);
+
+        mockMvc.perform(get("/api/listings")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+
+        // Verifikasi bahwa service yang dipanggil memang getActiveListings, bukan getAllListings
+        verify(listingService, times(1)).getActiveListings(any(PageRequest.class));
     }
 }

@@ -54,11 +54,15 @@
                             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border">
                         <option value="" disabled selected>Pilih Kategori</option>
 
-                        <option th:each="cat : ${categories}"
-                                th:value="${cat.id}"
-                                th:text="${cat.name}">
-                            Nama Kategori
-                        </option>
+                        <th:block th:each="cat : ${categories}">
+
+                            <option th:value="${cat.id}" th:text="${cat.name}" class="font-semibold text-gray-900"></option>
+
+                            <th:block th:each="subCat : ${cat.subCategories}">
+                                <option th:value="${subCat.id}" th:text="'-- ' + ${subCat.name}" class="text-gray-600"></option>
+                            </th:block>
+
+                        </th:block>
 
                     </select>
                     <p class="mt-1 text-xs text-gray-500">Pilih kategori yang paling sesuai agar mudah dicari pembeli.</p>

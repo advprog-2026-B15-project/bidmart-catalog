@@ -12,11 +12,15 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Menggunakan toUri().toString() akan otomatis membuat format yang tepat
-        // (contoh: file:///C:/Users/.../uploads/) baik untuk Windows maupun Mac.
-        String uploadPath = java.nio.file.Paths.get("uploads").toAbsolutePath().toUri().toString();
+        Path uploadDir = Paths.get("uploads");
+        String uploadPath = uploadDir.toFile().getAbsolutePath();
+
+        // Pastikan path diakhiri slash dan diawali file:
+        if (!uploadPath.endsWith(java.io.File.separator)) {
+            uploadPath += java.io.File.separator;
+        }
 
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations(uploadPath);
+                .addResourceLocations("file:" + uploadPath);
     }
 }

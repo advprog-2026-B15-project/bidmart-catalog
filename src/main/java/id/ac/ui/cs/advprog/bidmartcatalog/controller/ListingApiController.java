@@ -1,6 +1,7 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.controller;
 
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,15 +10,26 @@ import org.springframework.data.domain.PageRequest;
 
 import java.util.Map;
 import java.util.UUID;
+import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
+import java.util.List;
+import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/listings") // Prefix /api untuk membedakan dengan rute HTML
+@Tag(name = "Listing Catalog API", description = "Endpoints untuk mengelola dan mencari katalog lelang")
 public class ListingApiController {
 
     private final ListingService listingService;
+    private final CategoryService categoryService;
 
-    public ListingApiController(ListingService listingService) {
+    public ListingApiController(ListingService listingService, CategoryService categoryService) {
         this.listingService = listingService;
+        this.categoryService = categoryService;
     }
 
     /**
@@ -39,6 +51,7 @@ public class ListingApiController {
      * Method: PATCH /api/listings/{id}/current-price
      * Body JSON: { "newPrice": 5000000.0 }
      */
+    @Operation(summary = "Update Harga Terkini", description = "Memperbarui current price saat ada penawaran valid yang masuk")
     @PatchMapping("/{id}/current-price")
     public ResponseEntity<?> updateListingPrice(@PathVariable UUID id, @RequestBody Map<String, Double> payload) {
         try {
@@ -61,13 +74,86 @@ public class ListingApiController {
      * Endpoint: GET /api/listings
      * Digunakan untuk mengambil katalog publik dalam bentuk JSON (Hanya status ACTIVE)
      */
+    @Operation(summary = "Cari Katalog Lelang", description = "Mengambil daftar barang lelang dengan filter pencarian dan hierarki kategori")
     @GetMapping
     public ResponseEntity<Page<Listing>> getAllListings(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        // MODIFIKASI: Sekarang hanya mengambil yang ACTIVE sesuai API Contract
-        Page<Listing> activeListings = listingService.getActiveListings(PageRequest.of(page, size));
-        return ResponseEntity.ok(activeListings);
+        List<UUID> categoryIds = new ArrayList<>();
+
+        // Jika user memfilter berdasarkan kategori, ambil kategori itu DAN sub-kategorinya
+        if (categoryId != null) {
+            categoryIds = categoryService.getCategoryAndSubCategoryIds(categoryId);
+        }
+
+        Page<Listing> searchResults = listingService.searchAndFilterListings(
+                title, categoryIds, minPrice, maxPrice,null, PageRequest.of(page, size));
+
+        return ResponseEntity.ok(searchResults);
+    }
+
+    /**
+     * TAMBAHAN: Endpoint Edit (PUT) dengan penanganan error restriksi
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateListing(@PathVariable UUID id, @RequestBody Listing updateData) {
+        try {
+            Listing updatedListing = listingService.updateListing(id, updateData);
+            return ResponseEntity.ok(updatedListing);
+        } catch (IllegalStateException e) {
+            // Mengembalikan 403 Forbidden jika sudah ada bid / lelang tutup
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * TAMBAHAN: Endpoint Delete (DELETE) dengan penanganan error restriksi
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteListing(@PathVariable UUID id) {
+        try {
+            listingService.deleteListing(id);
+            return ResponseEntity.ok("Listing berhasil dihapus");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @Operation(summary = "Validasi Internal Lelang", description = "Mengecek apakah listing valid untuk menerima penawaran baru (digunakan oleh Modul Auction)")
+    @GetMapping("/{id}/validate")
+    public ResponseEntity<Map<String, Object>> validateListingForBid(@PathVariable UUID id) {
+        try {
+            Listing listing = listingService.getListingById(id);
+            Map<String, Object> response = new HashMap<>();
+
+            boolean isActive = listing.getStatus() == ListingStatus.ACTIVE;
+            boolean isTimeValid = listing.getEndTime().isAfter(LocalDateTime.now());
+
+            // Barang valid jika statusnya ACTIVE dan waktunya belum lewat
+            boolean isValid = isActive && isTimeValid;
+
+            response.put("listingId", listing.getId());
+            response.put("isValid", isValid);
+            response.put("currentPrice", listing.getCurrentPrice());
+            response.put("endTime", listing.getEndTime());
+
+            if (!isValid) {
+                response.put("reason", !isActive ? "Listing is not active" : "Auction time has ended");
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

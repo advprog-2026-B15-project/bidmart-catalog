@@ -13,6 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -72,5 +79,84 @@ class ListingServiceTest {
         assertThrows(RuntimeException.class, () -> {
             listingService.getListingById(UUID.randomUUID());
         });
+    }
+
+    @Test
+    @DisplayName("Test Create Listing - Dengan Multi-Gambar (Coverage Full Loop & I/O)")
+    void testCreateListingWithImages() {
+        // Persiapkan Listing dan Mock Files
+        listing.setImages(new ArrayList<>());
+        MockMultipartFile file1 = new MockMultipartFile("imageFiles", "bola.jpg", "image/jpeg", "konten bola".getBytes());
+        MockMultipartFile file2 = new MockMultipartFile("imageFiles", "bola2.jpg", "image/jpeg", "konten bola 2".getBytes());
+        MultipartFile[] files = {file1, file2};
+
+        when(listingRepository.save(any(Listing.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Listing result = listingService.createListing(listing, files);
+
+        assertAll(
+                () -> assertEquals(ListingStatus.DRAFT, result.getStatus()),
+                () -> assertEquals(2, result.getImages().size(), "Harusnya ada 2 gambar tersimpan"),
+                () -> assertTrue(result.getImages().get(0).isPrimary(), "Gambar pertama harus primary"),
+                () -> assertFalse(result.getImages().get(1).isPrimary(), "Gambar kedua tidak boleh primary"),
+                () -> assertNotNull(result.getCreatedAt())
+        );
+    }
+
+    @Test
+    @DisplayName("Test Create Listing - Dengan File Kosong (Coverage Continue)")
+    void testCreateListingWithEmptyFile() {
+        listing.setImages(new ArrayList<>());
+        MockMultipartFile emptyFile = new MockMultipartFile("imageFiles", "", "image/jpeg", new byte[0]);
+        MultipartFile[] files = {emptyFile};
+
+        when(listingRepository.save(any(Listing.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Listing result = listingService.createListing(listing, files);
+
+        assertEquals(0, result.getImages().size(), "File kosong harusnya di-skip");
+        verify(listingRepository, times(1)).save(any());
+    }
+
+    @Test
+    @DisplayName("Test Publish Listing - Return jika sudah ACTIVE (Coverage Status Check)")
+    void testPublishListingAlreadyActive() {
+        listing.setStatus(ListingStatus.ACTIVE);
+        when(listingRepository.findById(id)).thenReturn(Optional.of(listing));
+
+        Listing result = listingService.publishListing(id);
+
+        assertEquals(ListingStatus.ACTIVE, result.getStatus());
+        // Verifikasi save tidak dipanggil karena tidak ada perubahan status
+        verify(listingRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Test Get Active Listings - Memastikan Filter Status (Coverage Pagination)")
+    void testGetActiveListings() {
+        PageRequest pageable = PageRequest.of(0, 10);
+        Page<Listing> page = new PageImpl<>(List.of(listing));
+
+        when(listingRepository.findByStatus(ListingStatus.ACTIVE, pageable)).thenReturn(page);
+
+        Page<Listing> result = listingService.getActiveListings(pageable);
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        verify(listingRepository).findByStatus(ListingStatus.ACTIVE, pageable);
+    }
+
+    @Test
+    @DisplayName("Test Get All Listings - Paginasi Dasar")
+    void testGetAllListings() {
+        PageRequest pageable = PageRequest.of(0, 10);
+        Page<Listing> page = new PageImpl<>(List.of(listing));
+
+        when(listingRepository.findAll(pageable)).thenReturn(page);
+
+        Page<Listing> result = listingService.getAllListings(pageable);
+
+        assertEquals(1, result.getTotalElements());
+        verify(listingRepository).findAll(pageable);
     }
 }
