@@ -1,6 +1,7 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.controller;
 
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,9 +13,15 @@ import java.util.UUID;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
 import java.util.List;
 import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/listings") // Prefix /api untuk membedakan dengan rute HTML
+@Tag(name = "Listing Catalog API", description = "Endpoints untuk mengelola dan mencari katalog lelang")
 public class ListingApiController {
 
     private final ListingService listingService;
@@ -44,6 +51,7 @@ public class ListingApiController {
      * Method: PATCH /api/listings/{id}/current-price
      * Body JSON: { "newPrice": 5000000.0 }
      */
+    @Operation(summary = "Update Harga Terkini", description = "Memperbarui current price saat ada penawaran valid yang masuk")
     @PatchMapping("/{id}/current-price")
     public ResponseEntity<?> updateListingPrice(@PathVariable UUID id, @RequestBody Map<String, Double> payload) {
         try {
@@ -66,6 +74,7 @@ public class ListingApiController {
      * Endpoint: GET /api/listings
      * Digunakan untuk mengambil katalog publik dalam bentuk JSON (Hanya status ACTIVE)
      */
+    @Operation(summary = "Cari Katalog Lelang", description = "Mengambil daftar barang lelang dengan filter pencarian dan hierarki kategori")
     @GetMapping
     public ResponseEntity<Page<Listing>> getAllListings(
             @RequestParam(required = false) String title,
@@ -119,6 +128,7 @@ public class ListingApiController {
         }
     }
 
+    @Operation(summary = "Validasi Internal Lelang", description = "Mengecek apakah listing valid untuk menerima penawaran baru (digunakan oleh Modul Auction)")
     @GetMapping("/{id}/validate")
     public ResponseEntity<Map<String, Object>> validateListingForBid(@PathVariable UUID id) {
         try {
