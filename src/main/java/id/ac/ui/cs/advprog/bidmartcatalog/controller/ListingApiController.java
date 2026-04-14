@@ -119,5 +119,31 @@ public class ListingApiController {
         }
     }
 
+    @GetMapping("/{id}/validate")
+    public ResponseEntity<Map<String, Object>> validateListingForBid(@PathVariable UUID id) {
+        try {
+            Listing listing = listingService.getListingById(id);
+            Map<String, Object> response = new HashMap<>();
 
+            boolean isActive = listing.getStatus() == ListingStatus.ACTIVE;
+            boolean isTimeValid = listing.getEndTime().isAfter(LocalDateTime.now());
+
+            // Barang valid jika statusnya ACTIVE dan waktunya belum lewat
+            boolean isValid = isActive && isTimeValid;
+
+            response.put("listingId", listing.getId());
+            response.put("isValid", isValid);
+            response.put("currentPrice", listing.getCurrentPrice());
+            response.put("endTime", listing.getEndTime());
+
+            if (!isValid) {
+                response.put("reason", !isActive ? "Listing is not active" : "Auction time has ended");
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }
