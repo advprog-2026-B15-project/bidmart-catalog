@@ -53,6 +53,12 @@ dependencies {
     // OpenAPI / Swagger UI untuk dokumentasi API
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
 
+    // Library utama untuk integrasi RabbitMQ
+    implementation ("org.springframework.boot:spring-boot-starter-amqp")
+
+    // Library Jackson untuk konversi pesan JSON ke Object Java
+    implementation ("com.fasterxml.jackson.core:jackson-databind")
+
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.seleniumhq.selenium:selenium-java:$seleniumJavaVersion")
