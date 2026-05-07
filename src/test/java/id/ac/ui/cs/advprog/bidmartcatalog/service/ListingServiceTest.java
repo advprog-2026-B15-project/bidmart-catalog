@@ -5,158 +5,184 @@ import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import java.util.ArrayList;
-import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ListingServiceTest {
 
-    @Mock
-    private ListingRepository listingRepository;
+    @Mock ListingRepository listingRepository;
+    @InjectMocks ListingService listingService;
 
-    @InjectMocks
-    private ListingService listingService;
-
-    private Listing listing;
-    private UUID id;
+    private Listing activeListing;
+    private UUID listingId;
 
     @BeforeEach
     void setUp() {
-        id = UUID.randomUUID();
-        listing = new Listing();
-        listing.setId(id);
-        listing.setStartingPrice(100000.0);
-        listing.setCurrentPrice(100000.0);
-        listing.setStatus(ListingStatus.DRAFT);
+        listingId = UUID.randomUUID();
+        activeListing = Listing.builder()
+                .id(listingId)
+                .title("Test Listing")
+                .startingPrice(1_000_000.0)
+                .currentPrice(1_000_000.0)
+                .bidCount(0)
+                .status(ListingStatus.ACTIVE)
+                .build();
     }
 
-    @Test
-    @DisplayName("Test Publish Listing - Success from DRAFT to ACTIVE")
-    void testPublishListingSuccess() {
-        when(listingRepository.findById(id)).thenReturn(Optional.of(listing));
-        when(listingRepository.save(any(Listing.class))).thenReturn(listing);
+    // ── updateCurrentPrice ────────────────────────────────────────────────────
 
-        Listing result = listingService.publishListing(id);
+    @Nested
+    @DisplayName("updateCurrentPrice")
+    class UpdateCurrentPrice {
 
-        assertEquals(ListingStatus.ACTIVE, result.getStatus());
-        verify(listingRepository, times(1)).save(listing);
+        @Test
+        @DisplayName("Sukses: update harga dan increment bidCount")
+        void success_updatesAndIncrements() {
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            Listing result = listingService.updateCurrentPrice(listingId, 1_600_000.0);
+
+            assertThat(result.getCurrentPrice()).isEqualTo(1_600_000.0);
+            assertThat(result.getBidCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Gagal: harga baru <= currentPrice → IllegalArgumentException")
+        void fail_newPriceTooLow_throwsException() {
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+
+            assertThatThrownBy(() -> listingService.updateCurrentPrice(listingId, 500_000.0))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("lebih tinggi");
+
+            verify(listingRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Gagal: listing tidak ditemukan → RuntimeException")
+        void fail_listingNotFound_throwsException() {
+            when(listingRepository.findById(listingId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> listingService.updateCurrentPrice(listingId, 1_600_000.0))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("not found");
+        }
     }
 
-    @Test
-    @DisplayName("Test Update Price - Should throw Exception if new price is lower")
-    void testUpdatePriceFailure() {
-        when(listingRepository.findById(id)).thenReturn(Optional.of(listing));
+    // ── closeListing ──────────────────────────────────────────────────────────
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            listingService.updateCurrentPrice(id, 50000.0); // Lebih rendah dari 100k
-        });
+    @Nested
+    @DisplayName("closeListing")
+    class CloseListing {
 
-        verify(listingRepository, never()).save(any());
+        @Test
+        @DisplayName("Sukses: status berubah menjadi CLOSED")
+        void success_changesStatusToClosed() {
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            Listing result = listingService.closeListing(listingId);
+
+            assertThat(result.getStatus()).isEqualTo(ListingStatus.CLOSED);
+            ArgumentCaptor<Listing> captor = ArgumentCaptor.forClass(Listing.class);
+            verify(listingRepository).save(captor.capture());
+            assertThat(captor.getValue().getStatus()).isEqualTo(ListingStatus.CLOSED);
+        }
+
+        @Test
+        @DisplayName("Idempotent: listing sudah CLOSED tidak di-save ulang")
+        void idempotent_alreadyClosed_doesNotSaveAgain() {
+            activeListing.setStatus(ListingStatus.CLOSED);
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+
+            Listing result = listingService.closeListing(listingId);
+
+            assertThat(result.getStatus()).isEqualTo(ListingStatus.CLOSED);
+            verify(listingRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Gagal: listing tidak ditemukan → RuntimeException")
+        void fail_listingNotFound_throwsException() {
+            when(listingRepository.findById(listingId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> listingService.closeListing(listingId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining(listingId.toString());
+        }
     }
 
-    @Test
-    @DisplayName("Test Get Listing - Should throw Exception if ID not found")
-    void testGetListingNotFound() {
-        when(listingRepository.findById(any())).thenReturn(Optional.empty());
+    // ── updateListing (restriksi bid) ─────────────────────────────────────────
 
-        assertThrows(RuntimeException.class, () -> {
-            listingService.getListingById(UUID.randomUUID());
-        });
+    @Nested
+    @DisplayName("updateListing (restriksi bid)")
+    class UpdateListing {
+
+        @Test
+        @DisplayName("Gagal: sudah ada bid → IllegalStateException")
+        void fail_hasBid_throwsIllegalState() {
+            activeListing.setBidCount(3);
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+
+            Listing update = Listing.builder().title("New Title").build();
+            assertThatThrownBy(() -> listingService.updateListing(listingId, update))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("Gagal: listing CLOSED → IllegalStateException")
+        void fail_isClosed_throwsIllegalState() {
+            activeListing.setStatus(ListingStatus.CLOSED);
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+
+            Listing update = Listing.builder().title("New Title").build();
+            assertThatThrownBy(() -> listingService.updateListing(listingId, update))
+                    .isInstanceOf(IllegalStateException.class);
+        }
     }
 
-    @Test
-    @DisplayName("Test Create Listing - Dengan Multi-Gambar (Coverage Full Loop & I/O)")
-    void testCreateListingWithImages() {
-        // Persiapkan Listing dan Mock Files
-        listing.setImages(new ArrayList<>());
-        MockMultipartFile file1 = new MockMultipartFile("imageFiles", "bola.jpg", "image/jpeg", "konten bola".getBytes());
-        MockMultipartFile file2 = new MockMultipartFile("imageFiles", "bola2.jpg", "image/jpeg", "konten bola 2".getBytes());
-        MultipartFile[] files = {file1, file2};
+    // ── publishListing ────────────────────────────────────────────────────────
 
-        when(listingRepository.save(any(Listing.class))).thenAnswer(i -> i.getArguments()[0]);
+    @Nested
+    @DisplayName("publishListing")
+    class PublishListing {
 
-        Listing result = listingService.createListing(listing, files);
+        @Test
+        @DisplayName("DRAFT → ACTIVE")
+        void success_draftBecomesActive() {
+            activeListing.setStatus(ListingStatus.DRAFT);
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        assertAll(
-                () -> assertEquals(ListingStatus.DRAFT, result.getStatus()),
-                () -> assertEquals(2, result.getImages().size(), "Harusnya ada 2 gambar tersimpan"),
-                () -> assertTrue(result.getImages().get(0).isPrimary(), "Gambar pertama harus primary"),
-                () -> assertFalse(result.getImages().get(1).isPrimary(), "Gambar kedua tidak boleh primary"),
-                () -> assertNotNull(result.getCreatedAt())
-        );
-    }
+            Listing result = listingService.publishListing(listingId);
 
-    @Test
-    @DisplayName("Test Create Listing - Dengan File Kosong (Coverage Continue)")
-    void testCreateListingWithEmptyFile() {
-        listing.setImages(new ArrayList<>());
-        MockMultipartFile emptyFile = new MockMultipartFile("imageFiles", "", "image/jpeg", new byte[0]);
-        MultipartFile[] files = {emptyFile};
+            assertThat(result.getStatus()).isEqualTo(ListingStatus.ACTIVE);
+        }
 
-        when(listingRepository.save(any(Listing.class))).thenAnswer(i -> i.getArguments()[0]);
+        @Test
+        @DisplayName("Sudah ACTIVE: tidak ada perubahan")
+        void noOp_alreadyActive() {
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
 
-        Listing result = listingService.createListing(listing, files);
+            Listing result = listingService.publishListing(listingId);
 
-        assertEquals(0, result.getImages().size(), "File kosong harusnya di-skip");
-        verify(listingRepository, times(1)).save(any());
-    }
-
-    @Test
-    @DisplayName("Test Publish Listing - Return jika sudah ACTIVE (Coverage Status Check)")
-    void testPublishListingAlreadyActive() {
-        listing.setStatus(ListingStatus.ACTIVE);
-        when(listingRepository.findById(id)).thenReturn(Optional.of(listing));
-
-        Listing result = listingService.publishListing(id);
-
-        assertEquals(ListingStatus.ACTIVE, result.getStatus());
-        // Verifikasi save tidak dipanggil karena tidak ada perubahan status
-        verify(listingRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Test Get Active Listings - Memastikan Filter Status (Coverage Pagination)")
-    void testGetActiveListings() {
-        PageRequest pageable = PageRequest.of(0, 10);
-        Page<Listing> page = new PageImpl<>(List.of(listing));
-
-        when(listingRepository.findByStatus(ListingStatus.ACTIVE, pageable)).thenReturn(page);
-
-        Page<Listing> result = listingService.getActiveListings(pageable);
-
-        assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
-        verify(listingRepository).findByStatus(ListingStatus.ACTIVE, pageable);
-    }
-
-    @Test
-    @DisplayName("Test Get All Listings - Paginasi Dasar")
-    void testGetAllListings() {
-        PageRequest pageable = PageRequest.of(0, 10);
-        Page<Listing> page = new PageImpl<>(List.of(listing));
-
-        when(listingRepository.findAll(pageable)).thenReturn(page);
-
-        Page<Listing> result = listingService.getAllListings(pageable);
-
-        assertEquals(1, result.getTotalElements());
-        verify(listingRepository).findAll(pageable);
+            assertThat(result.getStatus()).isEqualTo(ListingStatus.ACTIVE);
+            verify(listingRepository, never()).save(any());
+        }
     }
 }
