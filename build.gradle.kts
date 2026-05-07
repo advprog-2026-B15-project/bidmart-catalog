@@ -58,6 +58,9 @@ dependencies {
 
     // Library Jackson untuk konversi pesan JSON ke Object Java
     implementation ("com.fasterxml.jackson.core:jackson-databind")
+    // ── Caching (Caffeine in-process) ─────────────────────────────────────────
+    implementation ("org.springframework.boot:spring-boot-starter-cache")
+    implementation ("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
