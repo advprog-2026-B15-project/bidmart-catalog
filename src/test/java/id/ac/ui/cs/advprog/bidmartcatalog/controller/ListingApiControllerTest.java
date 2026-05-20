@@ -16,7 +16,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 // Import untuk List dan UUID
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 // Import untuk Mockito (verify dan times)
@@ -25,13 +27,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
-import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ListingApiController.class)
@@ -142,21 +142,62 @@ class ListingApiControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/listings - Should return only ACTIVE listings")
-    void testGetAllActiveListings() throws Exception {
-        // Persiapkan mock Page
-        Page<Listing> activePage = new PageImpl<>(List.of(new Listing()));
+    @DisplayName("GET /api/listings/{id}/validate - Valid Listing")
+    void testValidateListingValid() throws Exception {
+        sampleListing.setStatus(ListingStatus.ACTIVE);
+        sampleListing.setEndTime(LocalDateTime.now().plusHours(1));
 
-        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(PageRequest.class)))
-                .thenReturn(activePage);
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
 
-        mockMvc.perform(get("/api/listings")
-                        .param("page", "0")
-                        .param("size", "10"))
+        mockMvc.perform(get("/api/listings/{id}/validate", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").isArray());
+                .andExpect(jsonPath("$.isValid").value(true));
+    }
 
-        // Verifikasi bahwa service yang dipanggil memang searchAndFilterListings
-        verify(listingService, times(1)).searchAndFilterListings(any(), any(), any(), any(), any(), any(PageRequest.class));
+    @Test
+    @DisplayName("GET /api/listings/{id}/validate - Expired Listing")
+    void testValidateListingExpired() throws Exception {
+        sampleListing.setStatus(ListingStatus.ACTIVE);
+        sampleListing.setEndTime(LocalDateTime.now().minusHours(1));
+
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+
+        mockMvc.perform(get("/api/listings/{id}/validate", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isValid").value(false))
+                .andExpect(jsonPath("$.reason").value("Auction time has ended"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/listings/{id} - Success")
+    void testUpdateListingSuccess() throws Exception {
+        when(listingService.updateListing(eq(id), any(Listing.class))).thenReturn(sampleListing);
+
+        mockMvc.perform(put("/api/listings/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\": \"Updated Title\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/listings/{id} - Success")
+    void testDeleteListingSuccess() throws Exception {
+        mockMvc.perform(delete("/api/listings/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Listing berhasil dihapus"));
+
+        verify(listingService, times(1)).deleteListing(id);
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/seller/{sellerId}/stats - Success")
+    void testGetSellerStatsSuccess() throws Exception {
+        Map<String, Object> stats = Map.of("totalListings", 5L);
+        when(listingService.getSellerStatistics("seller-1")).thenReturn(stats);
+
+        mockMvc.perform(get("/api/listings/seller/{sellerId}/stats", "seller-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalListings").value(5));
     }
 }

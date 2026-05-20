@@ -185,4 +185,53 @@ class ListingServiceTest {
             verify(listingRepository, never()).save(any());
         }
     }
+
+    // ── getSellerStatistics ───────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("getSellerStatistics")
+    class GetSellerStatistics {
+        @Test
+        @DisplayName("Sukses: mengembalikan map statistik")
+        void success_returnsStats() {
+            String sellerId = "seller-1";
+            when(listingRepository.countBySellerId(sellerId)).thenReturn(10L);
+            when(listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.ACTIVE)).thenReturn(5L);
+            when(listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.CLOSED)).thenReturn(3L);
+            when(listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.DRAFT)).thenReturn(2L);
+
+            java.util.Map<String, Object> stats = listingService.getSellerStatistics(sellerId);
+
+            assertThat(stats.get("totalListings")).isEqualTo(10L);
+            assertThat(stats.get("activeListings")).isEqualTo(5L);
+            assertThat(stats.get("closedListings")).isEqualTo(3L);
+            assertThat(stats.get("draftListings")).isEqualTo(2L);
+        }
+    }
+
+    // ── deleteListing ─────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("deleteListing")
+    class DeleteListing {
+        @Test
+        @DisplayName("Sukses: menghapus listing tanpa bid")
+        void success_deletesWithoutBid() {
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+
+            listingService.deleteListing(listingId);
+
+            verify(listingRepository).delete(activeListing);
+        }
+
+        @Test
+        @DisplayName("Gagal: menghapus listing dengan bid → IllegalStateException")
+        void fail_hasBid_throwsIllegalState() {
+            activeListing.setBidCount(1);
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+
+            assertThatThrownBy(() -> listingService.deleteListing(listingId))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+    }
 }
