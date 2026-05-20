@@ -49,15 +49,12 @@ class AuctionClosedConsumerTest {
         return event;
     }
 
-    @BeforeEach
-    void setUp() {
-        when(processedEventRepository.existsByEventId(anyString())).thenReturn(false);
-        when(processedEventRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-    }
-
     @Test
     @DisplayName("Sukses: close listing dan ack saat event baru")
     void handle_newEvent_closesAndAcks() throws IOException {
+        when(processedEventRepository.existsByEventId(anyString())).thenReturn(false);
+        when(processedEventRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
         verify(listingService).closeListing(LISTING_ID);
@@ -105,6 +102,7 @@ class AuctionClosedConsumerTest {
     @Test
     @DisplayName("Listing not found: nack tanpa requeue")
     void handle_listingNotFound_nacksWithoutRequeue() throws IOException {
+        when(processedEventRepository.existsByEventId(anyString())).thenReturn(false);
         doThrow(new RuntimeException("Listing not found"))
                 .when(listingService).closeListing(any());
 

@@ -3,6 +3,7 @@ package id.ac.ui.cs.advprog.bidmartcatalog.controller;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
+import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,9 @@ class ListingApiControllerTest {
 
     @MockitoBean
     private ListingService listingService;
+
+    @MockitoBean
+    private CategoryService categoryService;
 
     private Listing sampleListing;
     private UUID id;
@@ -143,7 +147,8 @@ class ListingApiControllerTest {
         // Persiapkan mock Page
         Page<Listing> activePage = new PageImpl<>(List.of(new Listing()));
 
-        when(listingService.getActiveListings(any(PageRequest.class))).thenReturn(activePage);
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(PageRequest.class)))
+                .thenReturn(activePage);
 
         mockMvc.perform(get("/api/listings")
                         .param("page", "0")
@@ -151,7 +156,7 @@ class ListingApiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
 
-        // Verifikasi bahwa service yang dipanggil memang getActiveListings, bukan getAllListings
-        verify(listingService, times(1)).getActiveListings(any(PageRequest.class));
+        // Verifikasi bahwa service yang dipanggil memang searchAndFilterListings
+        verify(listingService, times(1)).searchAndFilterListings(any(), any(), any(), any(), any(), any(PageRequest.class));
     }
 }

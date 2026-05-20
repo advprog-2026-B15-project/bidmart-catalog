@@ -20,7 +20,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,6 +32,23 @@ public class ListingService {
 
     public ListingService(ListingRepository listingRepository) {
         this.listingRepository = listingRepository;
+    }
+
+    // ── Statistics ────────────────────────────────────────────────────────────
+
+    public Map<String, Object> getSellerStatistics(String sellerId) {
+        Map<String, Object> stats = new HashMap<>();
+        long totalListings = listingRepository.countBySellerId(sellerId);
+        long activeListings = listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.ACTIVE);
+        long closedListings = listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.CLOSED);
+        long draftListings = listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.DRAFT);
+
+        stats.put("totalListings", totalListings);
+        stats.put("activeListings", activeListings);
+        stats.put("closedListings", closedListings);
+        stats.put("draftListings", draftListings);
+
+        return stats;
     }
 
     // ── Create ────────────────────────────────────────────────────────────────

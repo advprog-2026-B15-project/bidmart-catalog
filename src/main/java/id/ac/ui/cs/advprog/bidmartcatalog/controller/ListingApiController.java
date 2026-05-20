@@ -156,4 +156,15 @@ public class ListingApiController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    /**
+     * Endpoint Statistik Seller (Milestone 100)
+     * Method: GET /api/listings/seller/{sellerId}/stats
+     */
+    @Operation(summary = "Statistik Performa Penjual", description = "Mengambil statistik jumlah listing berdasarkan status untuk penjual tertentu")
+    @GetMapping("/seller/{sellerId}/stats")
+    public ResponseEntity<Map<String, Object>> getSellerStats(@PathVariable String sellerId) {
+        Map<String, Object> stats = listingService.getSellerStatistics(sellerId);
+        return ResponseEntity.ok(stats);
+    }
 }

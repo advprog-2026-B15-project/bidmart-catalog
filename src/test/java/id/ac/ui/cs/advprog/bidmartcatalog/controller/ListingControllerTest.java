@@ -3,6 +3,7 @@ package id.ac.ui.cs.advprog.bidmartcatalog.controller;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.CategoryRepository;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
+import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,9 @@ class ListingControllerTest {
 
     @MockitoBean
     private CategoryRepository categoryRepository;
+
+    @MockitoBean
+    private CategoryService categoryService;
 
     @Test
     @DisplayName("POST /listings/create - Coverage Multipart File")
@@ -92,7 +96,8 @@ class ListingControllerTest {
         Page<Listing> listingPage = new PageImpl<>(listingList, PageRequest.of(0, 10), 1);
 
         // 2. Mock perilaku service
-        when(listingService.getAllListings(any(PageRequest.class))).thenReturn(listingPage);
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(PageRequest.class)))
+                .thenReturn(listingPage);
 
         // 3. Jalankan request dan verifikasi model attribute
         mockMvc.perform(get("/listings")
@@ -112,7 +117,7 @@ class ListingControllerTest {
         Category cat1 = Category.builder().name("Elektronik").build();
         List<Category> categories = List.of(cat1);
 
-        when(categoryRepository.findAll()).thenReturn(categories);
+        when(categoryRepository.findByParentCategoryIsNull()).thenReturn(categories);
 
         // 2. Verifikasi form baru dan list kategori dikirim ke view
         mockMvc.perform(get("/listings/create"))

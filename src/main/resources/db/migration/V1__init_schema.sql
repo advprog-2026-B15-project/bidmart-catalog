@@ -18,6 +18,7 @@ CREATE TABLE listings (
                           reserve_price DOUBLE PRECISION,
                           end_time TIMESTAMP NOT NULL,
                           status VARCHAR(50) DEFAULT 'DRAFT',
+                          bid_count INTEGER DEFAULT 0,
                           created_at TIMESTAMP,
                           updated_at TIMESTAMP,
                           CONSTRAINT fk_listing_category FOREIGN KEY (category_id) REFERENCES categories(id)
