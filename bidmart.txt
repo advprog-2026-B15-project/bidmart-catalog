@@ -1,0 +1,219 @@
+BidMart: Platform Lelang dan Marketplace Real-time
+
+Deskripsi Sistem
+BidMart adalah platform lelang kompetitif secara real-time di mana pengguna dapat
+memasang barang untuk dilelang, mengajukan penawaran (bid) secara langsung, dan menyelesaikan
+transaksi pembelian. Platform ini menangani skenario lelang dengan tingkat persaingan tinggi di mana
+ratusan hingga ribuan pengguna dapat mengajukan penawaran pada barang populer secara
+bersamaan, sekaligus mendukung operasi marketplace tradisional seperti penelusuran katalog,
+manajemen pengguna, dan pemenuhan pesanan.
+Sistem ini memprioritaskan integritas penawaran (tidak ada penawaran yang hilang atau salah
+urutan), responsivitas real-time (pengguna melihat pembaruan penawaran dengan cepat), dan
+konsistensi finansial (saldo selalu akurat, dana ditahan dengan benar selama penawaran aktif).
+Platform mendukung mekanisme lelang English Auction dengan aturan: setiap penawaran
+harus melebihi penawaran tertinggi saat ini ditambah increment minimum, sistem memverifikasi dan
+menahan dana yang cukup saat penawaran diajukan, lelang yang mendekati waktu akhir diperpanjang
+jika ada penawaran baru dalam 2 menit terakhir (anti-sniping, dengan perpanjangan 2 menit dari waktu
+penawaran tersebut diterima, tanpa batas maksimum perpanjangan), dan pemenang lelang otomatis
+melanjutkan ke proses pembelian (lihat catatan mengenai kelompok 4 anggota pada bagian Modul
+Wajib). Jika harga cadangan (reserve price) tidak tercapai, lelang ditutup tanpa pemenang.
+Penjelasan Peran
+1. Administrator
+Administrator mengawasi operasional platform secara keseluruhan. Tugasnya meliputi
+pengelolaan pengguna, moderasi listing yang melanggar ketentuan, penanganan sengketa
+antara penjual dan pembeli, serta pemantauan aktivitas sistem. Administrator memiliki akses
+penuh terhadap seluruh fitur sistem.
+2. Penjual (Seller)
+Penjual adalah pengguna yang memasang barang untuk dilelang. Penjual dapat
+membuat listing lelang dengan harga awal, harga cadangan (reserve price), durasi lelang, dan
+detail barang. Penjual menerima notifikasi saat ada penawaran pada barangnya dan dapat
+memantau progres lelang. Setelah lelang selesai, penjual bertanggung jawab mengirimkan
+barang kepada pemenang.
+3. Pembeli (Buyer)
+Pembeli adalah pengguna yang mencari dan menawar barang lelang. Pembeli dapat
+menelusuri katalog, mengajukan penawaran, mengatur penawaran otomatis (proxy bid)
+hingga batas maksimum yang ditentukan, dan mengelola saldo dompet untuk keperluan
+penawaran. Setelah memenangkan lelang, pembeli menyelesaikan pembayaran dan
+menerima barang.
+Modul Wajib
+Sistem yang dikembangkan dalam BidMart terdiri atas beberapa modul. Setiap modul harus
+memiliki penanggung jawab yang jelas, namun pengerjaan dapat dilakukan secara individu maupun
+kolaboratif. Jumlah modul utama disesuaikan dengan jumlah anggota kelompok, dan pembagian
+tanggung jawab ditentukan oleh kelompok secara mandiri. Modul opsional hanya wajib untuk diambil
+ketika kelompok berjumlah lima anggota. Untuk kelompok berjumlah empat anggota, diperbolehkan
+untuk mengambil modul opsional, walaupun lebih disarankan untuk memfokuskan usaha untuk
+memperbaiki aspek-aspek wajib dibanding menyelesaikan modul opsional. Penting untuk
+diperhatikan juga bahwa setiap modul yang dipilih nantinya harus diintegrasikan dengan baik.
+Kegagalan mengintegrasikan modul dapat berakibat pada pengurangan nilai kelompok.
+Catatan untuk kelompok 4 anggota: Jika kelompok tidak mengerjakan Modul Pemesanan dan
+Notifikasi, maka alur sistem berakhir pada penentuan pemenang lelang. Modul Lelang bertanggung
+jawab menentukan pemenang dan Modul Dompet mengkonversi dana yang ditahan menjadi
+pembayaran. Kelompok tidak perlu mengimplementasikan pembuatan pesanan, pelacakan
+pengiriman, atau sistem notifikasi. Event yang pada spesifikasi ditujukan untuk Modul Notifikasi
+(seperti BidPlaced atau WinnerDetermined) tetap harus dipublikasikan oleh modul yang bersangkutan,
+namun tidak harus ada subscriber yang memprosesnya.
+1. Autentikasi dan Manajemen Pengguna
+Deskripsi Modul
+Modul ini bertanggung jawab atas seluruh proses verifikasi identitas pengguna,
+autentikasi multi-faktor (2FA), kontrol akses berbasis peran yang dinamis, dan manajemen
+siklus hidup token. Modul ini menjadi gerbang utama bagi seluruh interaksi dalam sistem
+dan harus menegakkan batasan keamanan yang berdampak ke seluruh modul lain.
+Use Case
+○ Pengguna baru dapat mendaftar dengan email dan kata sandi, kemudian melakukan
+verifikasi email
+○ Pengguna dapat login dan sistem memberikan access token serta refresh token
+setelah seluruh faktor autentikasi terpenuhi
+○ Pengguna yang mengaktifkan 2FA harus menyelesaikan faktor kedua (TOTP atau kode
+email) sebelum sesi dianggap terautentikasi penuh; sesi parsial kedaluwarsa setelah
+jendela waktu yang dikonfigurasi
+○ Pengguna dapat mengaktifkan, menonaktifkan, dan mengganti metode 2FA dari
+pengaturan akun
+○ Pengguna dapat memperbarui informasi profil seperti nama tampilan, foto, dan
+alamat pengiriman
+○ Admin dapat membuat peran kustom dan menetapkan atau mencabut permission
+granular (misalnya auction:create, bid:place) saat runtime tanpa redeployment
+○ Setiap endpoint yang dilindungi mendeklarasikan permission yang dibutuhkan
+dan pengecekan dilakukan pada layer middleware melalui pipeline: verifikasi
+kredensial → verifikasi 2FA → verifikasi permission
+○ Administrator dapat menonaktifkan akun pengguna yang melanggar ketentuan, dan
+seluruh sesi aktif pengguna tersebut diinvalidasi di semua perangkat
+○ Pengguna dapat melihat daftar sesi aktifnya dan mencabut sesi tertentu secara
+manual
+○ Sistem menerapkan batas sesi konkuren per pengguna; ketika batas terlampaui,
+sistem menolak login baru atau mencabut sesi tertua berdasarkan kebijakan yang
+dapat dikonfigurasi
+Keterkaitan dengan Modul Lain
+Seluruh modul lain bergantung pada modul ini untuk memverifikasi identitas dan
+permission pengguna. Setiap aksi yang memerlukan identitas (mengajukan penawaran,
+membuat listing, melihat saldo) harus melalui validasi token dan pengecekan permission yang
+disediakan modul ini. Pemanggilan dilakukan secara sinkronus karena validasi identitas
+bersifat blocking, aksi tidak boleh dilanjutkan tanpa kepastian bahwa pengguna sah dan
+memiliki hak akses yang sesuai. Modul Katalog memerlukan informasi profil penjual untuk
+ditampilkan pada listing. Modul Notifikasi memerlukan preferensi kontak pengguna untuk
+pengiriman pemberitahuan.
+Ketika admin menonaktifkan akun pengguna, modul ini menerbitkan event yang dapat
+ditanggapi modul lain, Modul Lelang untuk menangani lelang aktif milik penjual tersebut,
+Modul Penawaran untuk memutuskan nasib bid aktif, dan Modul Notifikasi untuk
+menginformasikan pihak terdampak. Modul ini tidak bertanggung jawab atas keputusan
+tersebut, tetapi bertanggung jawab memastikan event dipublikasikan secara andal. Demikian
+pula ketika peran pengguna berubah saat runtime, modul lain yang meng-cache permission
+perlu mengetahui perubahan tersebut.
+2. Katalog dan Manajemen Listing
+Deskripsi Modul
+Modul Lelang memerlukan validasi ke modul ini untuk memastikan listing yang
+ditawar masih aktif dan valid. Ketika ada penawaran baru dari Modul Lelang, informasi harga
+terkini pada listing perlu diperbarui agar pembeli melihat harga aktual. Pembaruan ini tidak
+harus terjadi secara langsung, namun harus konsisten agar tampilan katalog mencerminkan
+kondisi lelang yang sebenarnya. (Implementasi Synchronous API Call untuk validasi status
+listing, Asynchronous Communication via Message Queue untuk pembaruan harga tampilan)
+Use Case
+○ Penjual dapat membuat listing lelang baru dengan judul, deskripsi, gambar, kategori,
+harga awal, harga cadangan, dan durasi lelang
+○ Pembeli dapat menelusuri listing berdasarkan kategori, rentang harga, waktu
+berakhir, dan kata kunci
+○ Pembeli dapat melihat detail lengkap sebuah listing termasuk deskripsi, gambar, dan
+informasi penjual
+○ Penjual dapat memperbarui deskripsi atau gambar listing selama belum ada
+penawaran
+○ Penjual dapat membatalkan listing yang belum memiliki penawaran
+○ Sistem mengelola hierarki kategori (misalnya: Elektronik > Handphone > Smartphone)
+untuk organisasi listing
+Keterkaitan dengan Modul Lain
+Modul Lelang memerlukan validasi ke modul ini untuk memastikan listing yang ditawar
+masih aktif dan valid. Ketika ada penawaran baru dari Modul Lelang, informasi harga terkini
+pada listing perlu diperbarui agar pembeli melihat harga aktual. Pembaruan ini tidak harus
+terjadi secara langsung, namun harus konsisten agar tampilan katalog mencerminkan kondisi
+lelang yang sebenarnya.
+3. Lelang dan Penawaran (Bidding)
+Deskripsi Modul
+Modul ini merupakan inti dari sistem lelang yang menangani seluruh logika
+penawaran, penentuan urutan penawaran, perpanjangan waktu lelang, dan penentuan
+pemenang. Modul harus mampu memproses penawaran dengan cepat dan menangani
+situasi di mana banyak pengguna mengajukan penawaran secara bersamaan pada barang
+yang sama.
+Use Case
+○ Sistem memperpanjang waktu lelang sebesar 2 menit dari waktu penawaran diterima
+jika penawaran tersebut masuk dalam 2 menit terakhir sebelum lelang berakhir
+○ Pembeli dapat melihat riwayat penawaran pada sebuah lelang
+○ Setiap lelang memiliki siklus hidup (lifecycle) dengan tahapan yang terdefinisi
+(misalnya DRAFT → ACTIVE → EXTENDED → CLOSED → WON/UNSOLD) di
+mana setiap tahapan menentukan operasi apa yang diperbolehkan (misalnya,
+penawaran hanya dapat diterima saat ACTIVE atau EXTENDED, penjual hanya
+dapat mengedit listing saat DRAFT). Ketika waktu lelang berakhir, sistem
+mengevaluasi apakah harga cadangan terpenuhi untuk menentukan transisi ke
+WON atau UNSOLD. Penentuan pemenang sendiri cukup dilakukan melalui
+query penawaran tertinggi pada saat penutupan.
+○ Ketika dua penawaran dengan nilai sama masuk hampir bersamaan, sistem harus
+menentukan pemenang secara adil dan konsisten
+Keterkaitan dengan Modul Lain
+Sebelum menerima penawaran, modul ini harus memastikan pembeli memiliki saldo
+yang cukup melalui Modul Dompet. Permintaan penahanan dana harus dijawab dengan cepat
+agar tidak menghambat proses penawaran. Ketika penawaran berhasil, modul lain yang
+berkepentingan (Katalog untuk update harga, Notifikasi untuk memberitahu pengguna terkait)
+perlu mengetahui informasi tersebut. Penyampaian informasi ini dapat dilakukan secara tidak
+langsung agar tidak memperlambat proses penawaran utama.
+4. Dompet dan Manajemen Saldo
+Deskripsi Modul
+Modul ini mengelola saldo pengguna, penahanan dana untuk penawaran aktif, dan
+pencatatan seluruh transaksi keuangan. Modul harus menjamin konsistensi data keuangan
+dan menyediakan jejak audit lengkap untuk setiap perubahan saldo.
+Use Case
+○ Pengguna dapat melihat saldo tersedia dan saldo yang sedang ditahan
+○ Pengguna dapat melakukan top-up saldo ke dompet
+○ Pengguna dapat menarik saldo ke rekening bank
+○ Sistem menahan sejumlah dana ketika pengguna mengajukan penawaran
+○ Sistem melepaskan dana yang ditahan ketika pengguna kalah dalam penawaran
+○ Sistem mengkonversi dana yang ditahan menjadi pembayaran ketika pengguna
+memenangkan lelang
+○ Pengguna dapat melihat riwayat seluruh transaksi dompet
+○ Sistem harus memastikan saldo tidak pernah menjadi negatif dan setiap transaksi
+tercatat dengan benar
+Keterkaitan dengan Modul Lain
+Modul Lelang memanggil modul ini melalui API untuk memvalidasi dan menahan saldo
+sebelum menerima penawaran. Respons harus cepat karena merupakan bagian dari alur kritis
+penawaran. Modul ini juga dipanggil ketika lelang selesai untuk mengkonversi penahanan
+menjadi pembayaran aktual. Perubahan saldo yang signifikan dapat diberitahukan ke Modul
+Notifikasi agar pengguna mengetahui aktivitas dompetnya.
+5. Pemesanan dan Notifikasi (Opsional)
+Deskripsi Modul
+Modul ini menangani proses pasca-lelang yaitu pembuatan pesanan untuk pemenang
+lelang, pelacakan pengiriman, serta pengiriman notifikasi ke pengguna. Modul mengelola
+siklus hidup pesanan dari pembuatan hingga penyelesaian dan memastikan pengguna
+mendapat informasi terkini tentang aktivitas yang relevan.
+Use Case
+○ Sistem secara otomatis membuat pesanan ketika lelang selesai dengan pemenang
+○ Penjual dapat memperbarui status pengiriman pesanan (dikemas, dikirim, nomor
+resi)
+○ Pembeli dapat melihat status pesanan dan melacak pengiriman
+○ Pembeli dapat mengkonfirmasi penerimaan barang
+○ Pembeli dapat mengajukan sengketa jika barang tidak sesuai
+○ Pengguna menerima notifikasi ketika ada penawaran baru pada lelang yang diikuti
+○ Pengguna menerima notifikasi ketika dikalahkan dalam penawaran
+○ Pengguna menerima notifikasi ketika memenangkan lelang
+○ Pengguna dapat mengatur preferensi notifikasi (email, push notification)
+○ Pengguna yang sedang aktif di platform menerima pembaruan lelang secara langsung
+tanpa perlu refresh
+Keterkaitan dengan Modul Lain
+Modul ini menerima informasi dari hampir seluruh modul lain. Ketika Modul Lelang
+mencatat penawaran baru atau menentukan pemenang, informasi tersebut perlu diteruskan
+ke modul ini untuk dikirimkan kepada pengguna yang berkepentingan. Modul ini tidak
+dipanggil secara langsung oleh modul lain, melainkan bereaksi terhadap kejadian yang
+dipublikasikan modul lain.
+Constraint Umum Sistem
+Sistem yang dikembangkan harus memenuhi constraint berikut:
+● Setiap modul harus berinteraksi dengan modul lain melalui mekanisme komunikasi yang
+terdefinisi dengan jelas, tanpa berbagi state atau pemanggilan langsung antar komponen.
+● Setiap modul wajib memiliki justifikasi desain yang masuk akal.
+● Desain sistem harus memungkinkan pemisahan tanggung jawab yang jelas dan mudah
+dikembangkan di masa depan.
+Integrasi dan Kerja Kelompok
+Seluruh modul harus diintegrasikan menjadi satu sistem yang berjalan secara utuh, terlepas
+dari apakah modul dikerjakan secara individu maupun kolaboratif. Kelompok bertanggung jawab atas
+konsistensi alur data, kesesuaian integrasi antar modul, serta kejelasan pembagian tanggung jawab
+dan keberhasilan sistem secara keseluruhan.
+Catatan Penutup
+Detail implementasi teknis tidak ditentukan secara eksplisit dalam topik ini. Mahasiswa
+diharapkan melakukan analisis desain secara mandiri dan memilih solusi yang paling sesuai dengan
+kebutuhan sistem dan constraint yang diberikan.
+Referensi
+eBay Auction System - eBay.com
