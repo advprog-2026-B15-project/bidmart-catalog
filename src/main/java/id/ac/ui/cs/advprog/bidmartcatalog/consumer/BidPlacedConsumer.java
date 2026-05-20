@@ -43,7 +43,7 @@ public class BidPlacedConsumer {
         queues = RabbitMQConfig.QUEUE_BID_PLACED,
         containerFactory = "rabbitListenerContainerFactory"
     )
-    @Transactional
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public void handle(
             BidPlacedEvent event,
             Channel channel,

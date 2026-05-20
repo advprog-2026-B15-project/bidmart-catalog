@@ -36,7 +36,7 @@ class CategoryApiControllerTest {
         List<Category> categories = Arrays.asList(cat1, cat2);
 
         // 2. Tentukan perilaku Mock
-        when(categoryRepository.findAll()).thenReturn(categories);
+        when(categoryRepository.findByParentCategoryIsNull()).thenReturn(categories);
 
         // 3. Jalankan request dan verifikasi hasilnya
         mockMvc.perform(get("/api/categories")

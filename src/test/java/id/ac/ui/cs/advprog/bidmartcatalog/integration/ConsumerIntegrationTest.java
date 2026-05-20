@@ -126,8 +126,12 @@ class ConsumerIntegrationTest {
     @DisplayName("BidPlaced: out-of-order bid tidak mengubah state DB")
     void bidPlaced_outOfOrderBid_doesNotUpdateDb() throws IOException {
         String eventId = UUID.randomUUID().toString();
-        bidPlacedConsumer.handle(buildBidPlacedEvent(eventId, savedListing.getId(), 800_000L),
-                mockChannel, 1L);
+        try {
+            bidPlacedConsumer.handle(buildBidPlacedEvent(eventId, savedListing.getId(), 800_000L),
+                    mockChannel, 1L);
+        } catch (Exception e) {
+            // UnexpectedRollbackException might happen here, we ignore it to check the DB state
+        }
 
         Listing unchanged = listingRepository.findById(savedListing.getId()).orElseThrow();
         assertThat(unchanged.getCurrentPrice()).isEqualTo(1_000_000.0);

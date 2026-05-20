@@ -49,15 +49,12 @@ class BidPlacedConsumerTest {
         return event;
     }
 
-    @BeforeEach
-    void setUp() {
-        when(processedEventRepository.existsByEventId(anyString())).thenReturn(false);
-        when(processedEventRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-    }
-
     @Test
     @DisplayName("Sukses: update price dan ack saat event baru")
     void handle_newEvent_updatesAndAcks() throws IOException {
+        when(processedEventRepository.existsByEventId(anyString())).thenReturn(false);
+        when(processedEventRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
         verify(listingService).updateCurrentPrice(LISTING_ID, BID_AMOUNT.doubleValue());
@@ -103,6 +100,7 @@ class BidPlacedConsumerTest {
     @Test
     @DisplayName("Out-of-order bid: nack tanpa requeue (IllegalArgumentException)")
     void handle_outOfOrderBid_nacksWithoutRequeue() throws IOException {
+        when(processedEventRepository.existsByEventId(anyString())).thenReturn(false);
         doThrow(new IllegalArgumentException("Harga terlalu rendah"))
                 .when(listingService).updateCurrentPrice(any(), anyDouble());
 
@@ -115,6 +113,7 @@ class BidPlacedConsumerTest {
     @Test
     @DisplayName("Unexpected exception: nack tanpa requeue")
     void handle_unexpectedException_nacksWithoutRequeue() throws IOException {
+        when(processedEventRepository.existsByEventId(anyString())).thenReturn(false);
         doThrow(new RuntimeException("DB down"))
                 .when(listingService).updateCurrentPrice(any(), anyDouble());
 
