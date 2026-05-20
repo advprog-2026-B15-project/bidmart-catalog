@@ -9,6 +9,7 @@ public class ListingRequestDTO {
     private String title;
     private String description;
     private Double startingPrice;
+    private Double reservePrice;
     private UUID categoryId;
     private LocalDateTime endTime;
 }

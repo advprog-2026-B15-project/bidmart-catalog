@@ -55,6 +55,7 @@ public class ListingApiController {
             listing.setTitle(request.getTitle());
             listing.setDescription(request.getDescription());
             listing.setStartingPrice(request.getStartingPrice());
+            listing.setReservePrice(request.getReservePrice());
             listing.setEndTime(request.getEndTime());
             listing.setSellerId(sellerId);
             
