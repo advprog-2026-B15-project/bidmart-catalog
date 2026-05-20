@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.bidmartcatalog.controller;
 
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.Category;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -69,6 +71,75 @@ class ListingApiControllerTest {
                 .andExpect(jsonPath("$.title").value("Raket Yonex"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
+
+    @Test
+    @DisplayName("POST /api/listings - Success")
+    void testCreateListingSuccess() throws Exception {
+        Listing createdListing = new Listing();
+        createdListing.setId(UUID.randomUUID());
+        createdListing.setTitle("New Listing");
+        createdListing.setStatus(ListingStatus.DRAFT);
+        createdListing.setSellerId("usr-2406");
+
+        when(listingService.createListing(any(Listing.class), eq(null))).thenReturn(createdListing);
+        when(categoryService.getCategoryById(any(UUID.class))).thenReturn(new Category());
+
+        String jsonPayload = "{\"title\": \"New Listing\", \"description\": \"Desc\", \"startingPrice\": 10000.0, \"categoryId\": \"" + UUID.randomUUID() + "\", \"endTime\": \"2024-12-31T23:59:59\"}";
+
+        mockMvc.perform(post("/api/listings")
+                        .header("X-User-Id", "usr-2406")
+                        .header("X-User-Role", "SELLER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.title").value("New Listing"));
+    }
+
+    @Test
+    @DisplayName("POST /api/listings - Forbidden (Not Seller)")
+    void testCreateListingForbidden() throws Exception {
+        mockMvc.perform(post("/api/listings")
+                        .header("X-User-Id", "usr-2406")
+                        .header("X-User-Role", "BUYER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/publish - Success")
+    void testPublishListingSuccess() throws Exception {
+        sampleListing.setStatus(ListingStatus.DRAFT);
+        sampleListing.setSellerId("usr-2406");
+        
+        Listing publishedListing = new Listing();
+        publishedListing.setId(id);
+        publishedListing.setStatus(ListingStatus.ACTIVE);
+        publishedListing.setSellerId("usr-2406");
+
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        when(listingService.publishListing(id)).thenReturn(publishedListing);
+
+        mockMvc.perform(patch("/api/listings/{id}/publish", id)
+                        .header("X-User-Id", "usr-2406"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/publish - Forbidden (Not Owner)")
+    void testPublishListingForbidden() throws Exception {
+        sampleListing.setStatus(ListingStatus.DRAFT);
+        sampleListing.setSellerId("usr-2406");
+        
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+
+        mockMvc.perform(patch("/api/listings/{id}/publish", id)
+                        .header("X-User-Id", "usr-9999"))
+                .andExpect(status().isForbidden());
+    }
+
 
     @Test
     @DisplayName("PATCH /api/listings/{id}/current-price - Success")
@@ -172,8 +243,12 @@ class ListingApiControllerTest {
     @DisplayName("PUT /api/listings/{id} - Success")
     void testUpdateListingSuccess() throws Exception {
         when(listingService.updateListing(eq(id), any(Listing.class))).thenReturn(sampleListing);
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        sampleListing.setSellerId("usr-2406");
 
         mockMvc.perform(put("/api/listings/{id}", id)
+                        .header("X-User-Id", "usr-2406")
+                        .header("X-User-Role", "SELLER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"Updated Title\"}"))
                 .andExpect(status().isOk())
@@ -181,9 +256,26 @@ class ListingApiControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /api/listings/{id} - Forbidden (Not Seller)")
+    void testUpdateListingForbiddenNotSeller() throws Exception {
+        mockMvc.perform(put("/api/listings/{id}", id)
+                        .header("X-User-Id", "usr-2406")
+                        .header("X-User-Role", "BUYER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\": \"Updated Title\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Hanya SELLER yang dapat mengedit listing."));
+    }
+
+    @Test
     @DisplayName("DELETE /api/listings/{id} - Success")
     void testDeleteListingSuccess() throws Exception {
-        mockMvc.perform(delete("/api/listings/{id}", id))
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        sampleListing.setSellerId("usr-2406");
+
+        mockMvc.perform(delete("/api/listings/{id}", id)
+                        .header("X-User-Id", "usr-2406")
+                        .header("X-User-Role", "SELLER"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Listing berhasil dihapus"));
 

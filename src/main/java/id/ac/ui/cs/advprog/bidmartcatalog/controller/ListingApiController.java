@@ -2,7 +2,11 @@ package id.ac.ui.cs.advprog.bidmartcatalog.controller;
 
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.Category;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
+import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
+import id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingRequestDTO;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
@@ -10,7 +14,6 @@ import org.springframework.data.domain.PageRequest;
 
 import java.util.Map;
 import java.util.UUID;
-import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
 import java.util.List;
 import java.util.ArrayList;
 import java.time.LocalDateTime;
@@ -30,6 +33,41 @@ public class ListingApiController {
     public ListingApiController(ListingService listingService, CategoryService categoryService) {
         this.listingService = listingService;
         this.categoryService = categoryService;
+    }
+
+    /**
+     * Endpoint: POST /api/listings
+     * Membuat listing lelang baru berstatus DRAFT.
+     */
+    @Operation(summary = "Buat Listing Baru", description = "Membuat listing lelang baru dengan status DRAFT")
+    @PostMapping
+    public ResponseEntity<?> createListing(
+            @RequestHeader(value = "X-User-Id", required = true) String sellerId,
+            @RequestHeader(value = "X-User-Role", required = true) String role,
+            @RequestBody ListingRequestDTO request) {
+
+        if (!"SELLER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat membuat listing.");
+        }
+
+        try {
+            Listing listing = new Listing();
+            listing.setTitle(request.getTitle());
+            listing.setDescription(request.getDescription());
+            listing.setStartingPrice(request.getStartingPrice());
+            listing.setEndTime(request.getEndTime());
+            listing.setSellerId(sellerId);
+            
+            if (request.getCategoryId() != null) {
+                Category category = categoryService.getCategoryById(request.getCategoryId());
+                listing.setCategory(category);
+            }
+
+            Listing createdListing = listingService.createListing(listing, null);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdListing);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     /**
@@ -71,6 +109,29 @@ public class ListingApiController {
     }
 
     /**
+     * Endpoint: PATCH /api/listings/{id}/publish
+     * Mengubah status DRAFT menjadi ACTIVE.
+     */
+    @Operation(summary = "Publish Listing", description = "Mengubah status listing DRAFT menjadi ACTIVE")
+    @PatchMapping("/{id}/publish")
+    public ResponseEntity<?> publishListing(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = true) String sellerId) {
+        
+        try {
+            Listing existingListing = listingService.getListingById(id);
+            if (!existingListing.getSellerId().equals(sellerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Akses ditolak: bukan pemilik listing.");
+            }
+            
+            Listing publishedListing = listingService.publishListing(id);
+            return ResponseEntity.ok(publishedListing);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
      * Endpoint: GET /api/listings
      * Digunakan untuk mengambil katalog publik dalam bentuk JSON (Hanya status ACTIVE)
      */
@@ -92,37 +153,71 @@ public class ListingApiController {
         }
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
-                title, categoryIds, minPrice, maxPrice,null, PageRequest.of(page, size));
+                title, categoryIds, minPrice, maxPrice, ListingStatus.ACTIVE, PageRequest.of(page, size));
 
         return ResponseEntity.ok(searchResults);
     }
 
     /**
-     * TAMBAHAN: Endpoint Edit (PUT) dengan penanganan error restriksi
+     * Endpoint Edit (PUT) dengan penanganan error restriksi
      */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateListing(@PathVariable UUID id, @RequestBody Listing updateData) {
+    public ResponseEntity<?> updateListing(
+            @PathVariable UUID id, 
+            @RequestHeader(value = "X-User-Id", required = true) String sellerId,
+            @RequestHeader(value = "X-User-Role", required = true) String role,
+            @RequestBody ListingRequestDTO updateData) {
+        
+        if (!"SELLER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat mengedit listing.");
+        }
+
         try {
-            Listing updatedListing = listingService.updateListing(id, updateData);
+            Listing existingListing = listingService.getListingById(id);
+            if (!existingListing.getSellerId().equals(sellerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Akses ditolak: bukan pemilik listing.");
+            }
+
+            Listing listingUpdates = new Listing();
+            listingUpdates.setTitle(updateData.getTitle());
+            listingUpdates.setDescription(updateData.getDescription());
+            if (updateData.getCategoryId() != null) {
+                listingUpdates.setCategory(categoryService.getCategoryById(updateData.getCategoryId()));
+            }
+
+            Listing updatedListing = listingService.updateListing(id, listingUpdates);
             return ResponseEntity.ok(updatedListing);
         } catch (IllegalStateException e) {
             // Mengembalikan 403 Forbidden jika sudah ada bid / lelang tutup
-            return ResponseEntity.status(403).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
     /**
-     * TAMBAHAN: Endpoint Delete (DELETE) dengan penanganan error restriksi
+     * Endpoint Delete (DELETE) dengan penanganan error restriksi
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteListing(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteListing(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = true) String sellerId,
+            @RequestHeader(value = "X-User-Role", required = true) String role) {
+        
+        if (!"SELLER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat menghapus listing.");
+        }
+
         try {
+            Listing existingListing = listingService.getListingById(id);
+            if (!existingListing.getSellerId().equals(sellerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Akses ditolak: bukan pemilik listing.");
+            }
+
             listingService.deleteListing(id);
             return ResponseEntity.ok("Listing berhasil dihapus");
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(403).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
