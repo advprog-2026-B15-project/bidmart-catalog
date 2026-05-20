@@ -1,0 +1,195 @@
+5. Rubrik Penilaian
+
+
+Penilaian Progress - Proyek Akhir (15%, dinilai oleh asdos)
+Ada 5 periode penilaian: Persiapan, Kemajuan 25%, Kemajuan 50%, Kejuan 75%, dan Final (100%).
+Kelompok Nilai
+	Persentase
+	Individu
+	50%
+	Kelompok
+	50% (akan menjadi 0 jika komponen individu bernilai 0)
+	        
+        Rubrik Penilaian Progress - Individu
+Skala
+	Deskripsi
+	0
+	Tidak ada implementasi.
+	1
+	<= 2 commit push selama periode penilaian progress.
+	2
+	>2 commit push selama periode penilaian progress, namun belum ada pekerjaan yang di-merge.
+	3
+	Kuantitas pekerjaan kurang sesuai dengan task yang diberikan per minggu, dan pekerjaan sudah di-merge.
+	4
+	Kuantitas pekerjaan sesuai dengan task yang diberikan per minggu, dan pekerjaan sudah di-merge.
+	________________
+
+
+        Rubrik Penilaian Progress - Kelompok
+Skala
+	Deskripsi
+	0
+	Tidak ada implementasi.
+	1
+	Kelompok berhasil menyelesaikan < 50% dari target milestone yang dinilai.
+	2
+	Kelompok berhasil menyelesaikan dan mengintegrasikan >= 50% dari target milestone yang dinilai.
+	3
+	Kelompok berhasil menyelesaikan dan mengintegrasikan >= 75% dari target milestone yang dinilai.
+	4
+	Kelompok berhasil menyelesaikan dan mengintegrasikan 100% dari target milestone yang dinilai.
+	Catatan: Definisi “integrasi” adalah:
+* Fungsionalitas sudah berjalan baik,
+* Data bisa mengalir dengan baik antar fitur,
+* Frontend sudah bisa digunakan dan terhubung dengan backend, dan
+* Standar penerapan kualitas perangkat lunak terpenuhi (unit testing, clean code, secure coding).
+Rubrik Penilaian Progress khusus Final - Kelompok
+Skala
+	Deskripsi
+	0
+	Tidak ada implementasi.
+	1
+	Kelompok berhasil menyelesaikan < 100% dari target milestone yang dinilai.
+	2
+	Kelompok berhasil menyelesaikan dan mengintegrasikan seluruh fitur pada target milestone yang dinilai, dan memenuhi semua kriteria berikut:
+* Ada implementasi CI/CD yang berjalan dengan baik (sudah green dan berhasil deploy).
+* Sudah menggunakan tools untuk pengujian kualitas kode. Report pada tools bisa diakses asdos dan report sudah berhasil menampilkan data kualitas kode.
+* Unit testing dan functional testing sudah dilakukan untuk semua fitur. Functional testing menggunakan Serenity atau tools sejenis. Report artifacts bisa diakses secara publik.
+	3
+	Memenuhi semua kriteria berikut:
+* Ada implementasi CI/CD yang berjalan dengan baik (sudah green dan berhasil deploy).
+* Sudah menggunakan tools untuk pengujian kualitas kode. Report pada tools bisa diakses asdos dan report sudah berhasil menampilkan data kualitas kode dengan nilai >= 90%.
+* Unit testing dan functional testing sudah dilakukan untuk semua fitur. Functional testing menggunakan Serenity atau tools sejenis. Report artifacts bisa diakses secara publik, memenuhi coverage >= 90%.
+	4
+	Memenuhi semua kriteria berikut:
+* Ada perbandingan before dan after commit yang menunjukkan peningkatan performa berdasarkan semua hasil pengujian berikut:
+   * Profiling kode,
+   * Metrik APDEX,
+   * Performance testing Lighthouse, dan
+   * Clarity untuk usability testing.
+* Monitoring sudah berjalan dengan baik, berhasil menampilkan observability performa aplikasi dan performa database.
+	
+
+Penilaian Akhir - Proyek Akhir (15%, dinilai oleh dosen)
+Kelompok Nilai
+	Komponen
+	Persentase
+	Individu
+	Pemahaman Materi Perkuliahan
+	30%
+	Kontribusi Pemahaman terhadap Pengerjaan Tugas
+	30%
+	Kelompok
+(nilai otomatis menjadi 0 untuk individu yang tidak berkontribusi sama sekali)
+	Software Design (SOLID Principles, Maintainability, Design Patterns)
+	10%
+	Software Quality (Clean Code, Secure Coding, Testing, Profiling)
+	10%
+	Software Architecture (Architecture, Concurrency, Asynchronous, High-Level Networking)
+	10%
+	Software Deployment (CI/CD, Deployment Strategies, Containerization, Monitoring, Infrastructure as Code)
+	10%
+	
+
+Rubrik Penilaian Akhir - Individu
+1. Pemahaman Materi Perkuliahan
+Skala
+	Deskripsi
+	0
+	Tidak bisa menjawab pertanyaan apapun.
+	1
+	Memahami sebagian (minimal 50%) definisi standar sesuai dengan Learning Objective untuk 2 modul yang dipilih secara random.
+	2
+	Memahami seluruh (100%) definisi standar sesuai dengan Learning Objective untuk 2 modul yang dipilih secara random.
+	3
+	Memahami penerapan yang tepat untuk seluruh (100%) Learning Objective untuk 2 modul yang dipilih secara random, terhadap proyek akhir kelompok.
+	4
+	Mampu menganalisis/mengevaluasi secara mendalam terhadap penerapan materi Learning Objective untuk suatu modul terhadap proyek akhir kelompok, untuk mendapatkan hasil yang terbaik.
+Mampu menjawab pertanyaan/challenge dengan lancar dan memiliki kemampuan komunikasi yang sangat baik.
+Dosen akan menilai secara subjektif berdasarkan pemaparan, kualitas kerja lebih, dan kreatifitas dari mahasiswa.
+	
+
+2. Kontribusi terhadap Pengerjaan Tugas
+Skala
+	Deskripsi
+	0
+	Tidak ada implementasi yang fungsional (bermakna sesuai fitur).
+	1
+	Semua implementasi secara individu tidak bisa digunakan (error, tidak bisa di-deploy, tidak di-merge, tidak terintegrasi front-end dan back-end untuk fitur yang sama, dst.)
+	2
+	Ada (minimal 1 fitur) implementasi secara individu sudah bisa digunakan, namun belum terintegrasi dengan kelompok atau ada minor error (error yang tidak membuat aplikasinya crash) ketika digunakan. Implementasi hanya berjalan di local.
+	3
+	Semua implementasi secara individu yang sudah terintegrasi dengan pekerjaan kelompok lainnya, bisa dijalankan melalui satu project kelompok yang utuh.
+	4
+	Semua implementasi secara individu sudah ter-deploy secara otomatis lewat CI/CD (wajib), dan sudah mengaplikasikan usaha lebih lanjut untuk menjaga kualitas implementasi, misal: analisis profiling, monitoring, atau security.
+	
+
+Rubrik Penilaian Akhir - Kelompok
+1. Software Design
+Skala
+	Deskripsi
+	0
+	Tidak menggunakan prinsip software design sama sekali.
+	1
+	Pemahaman terhadap prinsip dasar software design (seperti SOLID Principle) kurang sesuai dengan panduan/referensi. Penggunaan design pattern dengan alasan yang tidak sesuai dengan panduan/referensi.
+	2
+	Pemahaman terhadap prinsip dasar software design (seperti SOLID Principle) sesuai dengan panduan/referensi. Menggunakan kurang dari 3 design pattern secara sesuai dengan panduan/referensi dan deskripsi tugas kelompok.
+	3
+	Menggunakan minimal 3 design pattern secara sesuai dengan panduan/referensi dan deskripsi tugas kelompok.
+	4
+	Melakukan usaha lebih mendalam untuk meningkatkan aspek kualitas (non-functional requirements) ketika menyusun software design dan menjaga standar kualitas untuk seluruh anggota kelompok ketika implementasi. Mampu menunjukkan kondisi sebelum dan sesudah memperbaiki software design.
+	
+
+2. Software Quality
+Skala
+	Deskripsi
+	0
+	Tidak ada hal yang dilakukan untuk menjaga software quality.
+	1
+	Mengimplementasikan sebagian (minimal 3) teknik dasar quality yang diminta (clean code, unit testing, functional testing, regression testing, secure coding, profiling), dengan menerapkan tools, seperti Selenium, CodeScene, SonarQube, OSSF Scorecard, atau tools lainnya yang terkait.
+	2
+	Mengimplementasikan semua teknik dasar quality yang diminta (clean code, unit testing, functional testing, regression testing, secure coding, profiling), dengan menerapkan tools, seperti Selenium, CodeScene, SonarQube, OSSF Scorecard, atau tools lainnya yang terkait.
+	3
+	Laporan untuk kriteria-kriteria yang disebutkan pada poin 2, berhasil dicapai dengan nilai >= 90%.
+	4
+	Profiling telah dilakukan untuk fungsi-fungsi yang memerlukan performa tinggi/critical, dan dapat menjustifikasi kebutuhan performa tersebut. Hasil profiling ditindaklanjuti dengan optimasi kode dan berhasil menunjukkan improvement minimal 50% dibandingkan dengan implementasi sebelumnya.
+	
+
+3. Software Architecture
+Skala
+	Deskripsi
+	0
+	Tidak dapat implementasi.
+	1
+	Sudah ada upaya implementasi, terlihat ada commit message namun tidak berjalan baik. 
+	2
+	Menerapkan architecture yang diminta oleh spesifikasi project dengan penerapan bagus dan berjalan baik.
+	3
+	Menerapkan architecture tambahan selain yang diminta oleh spesifikasi project dan dapat menjelaskan manfaatnya bagi project.
+	4
+	Mensimulasikan manfaat architecture tambahan dengan metode testing lanjutan seperti load testing atau security testing.
+	
+
+4. Software Deployment
+Skala
+	Deskripsi
+	0
+	Deployment hanya berjalan di komputer pribadi (localhost) dan tidak ada usaha untuk melakukan otomasi proses deployment. Ditambah dengan belum ada usaha untuk menerapkan observability maupun menyiapkan sistem monitoring.
+	1
+	Sudah ada lingkungan deployment, namun persiapannya (provisioning) serta prosedur deployment masih dilakukan secara manual. Selain itu, sudah ada inisiatif menerapkan observability walaupun belum disesuaikan dengan kebutuhan proyek atau datanya belum berhasil masuk ke sistem monitoring.
+	2
+	Menerapkan CI/CD dan otomasi lainnya (misal: automated database migration atau Infrastructure-as-Code) dalam provisioning dan deployment, dengan tetap menjaga proses penjaminan mutu (contoh: guard berdasarkan hasil testing dan linter). Selain itu, metrics sudah berhasil diambil dari observability endpoints dan dapat diolah di sistem monitoring dalam bentuk visualisasi dashboard.
+	3
+	Menerapkan strategi deployment (seperti: Blue/Green, Canary, Feature Flags, dsb.) dan mampu menjelaskan justifikasi mengenai pilihan strategi deployment yang digunakan. Selain itu, observability metrics yang diambil dan diolah ke dalam dashboard adalah metrics-metrics yang relevan serta memudahkan pemahaman kondisi sistem saat ini.
+	4
+	Menerapkan prosedur deployment lanjutan (seperti: rollback deployment, load balancing, disaster recovery, atau prosedur lainnya), dan mampu menunjukkan bahwa prosedur tersebut berjalan dengan baik.
+  
+
+  
+
+
+
+
+
+
