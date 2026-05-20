@@ -79,21 +79,27 @@ jobs:
         run: |
           COVERAGE=$(python3 - << 'EOF'
           import xml.etree.ElementTree as ET, sys
-          tree = ET.parse("build/reports/jacoco/test/jacocoTestReport.xml")
-          root = tree.getroot()
-          for counter in root.findall(".//counter[@type='INSTRUCTION']"):
-              missed  = int(counter.get("missed", 0))
-              covered = int(counter.get("covered", 0))
-              total   = missed + covered
-              if total > 0:
-                  pct = covered / total * 100
-                  print(f"{pct:.1f}")
-                  sys.exit(0)
+          try:
+              tree = ET.parse("build/reports/jacoco/test/jacocoTestReport.xml")
+              root = tree.getroot()
+              # Mencari counter INSTRUCTION yang langsung di bawah <report>
+              for counter in root.findall("./counter[@type='INSTRUCTION']"):
+                  missed  = int(counter.get("missed", 0))
+                  covered = int(counter.get("covered", 0))
+                  total   = missed + covered
+                  if total > 0:
+                      pct = (covered / total) * 100
+                      print(f"{pct:.1f}")
+                      sys.exit(0)
+          except Exception as e:
+              print(f"Error parsing XML: {e}", file=sys.stderr)
           print("0")
           EOF
           )
           echo "Instruction coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+          # Menggunakan awk untuk perbandingan float yang lebih portabel
+          is_below=$(echo "$COVERAGE 70" | awk '{if ($1 < $2) print 1; else print 0}')
+          if [ "$is_below" -eq 1 ]; then
             echo "❌ Coverage ${COVERAGE}% is below the 70% threshold!"
             exit 1
           fi
