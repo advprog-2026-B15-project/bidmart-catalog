@@ -17,6 +17,11 @@ public class CategoryService {
         this.categoryRepository = categoryRepository;
     }
 
+    public Category getCategoryById(UUID id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+    }
+
     /**
      * Digunakan oleh Controller sebelum memanggil ListingService.searchAndFilterListings
      * Ini mengambil ID kategori yang dicari beserta semua ID sub-kategorinya.
