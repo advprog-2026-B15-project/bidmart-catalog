@@ -126,5 +126,61 @@ class ListingControllerTest {
                 .andExpect(model().attributeExists("listing"))
                 .andExpect(model().attribute("categories", categories));
     }
+
+    @Test
+    @DisplayName("POST /listings/{id}/delete - Success")
+    void testDeleteListingSuccess() throws Exception {
+        UUID id = UUID.randomUUID();
+        mockMvc.perform(post("/listings/" + id + "/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/listings"));
+        verify(listingService).deleteListing(id);
+    }
+
+    @Test
+    @DisplayName("POST /listings/{id}/delete - Failure")
+    void testDeleteListingFailure() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new IllegalStateException("Failure")).when(listingService).deleteListing(id);
+        mockMvc.perform(post("/listings/" + id + "/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("error", "Failure"));
+    }
+
+    @Test
+    @DisplayName("GET /listings/{id}/edit - Success")
+    void testEditListingForm() throws Exception {
+        UUID id = UUID.randomUUID();
+        Listing listing = new Listing();
+        when(listingService.getListingById(id)).thenReturn(listing);
+        when(categoryRepository.findByParentCategoryIsNull()).thenReturn(List.of());
+
+        mockMvc.perform(get("/listings/" + id + "/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("edit-listing"))
+                .andExpect(model().attribute("listing", listing));
+    }
+
+    @Test
+    @DisplayName("POST /listings/{id}/edit - Success")
+    void testUpdateListingSuccess() throws Exception {
+        UUID id = UUID.randomUUID();
+        mockMvc.perform(post("/listings/" + id + "/edit")
+                        .param("title", "Updated"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/listings/" + id));
+        verify(listingService).updateListing(eq(id), any());
+    }
+
+    @Test
+    @DisplayName("POST /listings/{id}/edit - Failure")
+    void testUpdateListingFailure() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new IllegalStateException("Err")).when(listingService).updateListing(eq(id), any());
+        mockMvc.perform(post("/listings/" + id + "/edit")
+                        .param("title", "Updated"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("error", "Err"));
+    }
 }
 

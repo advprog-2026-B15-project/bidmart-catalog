@@ -234,4 +234,121 @@ class ListingServiceTest {
                     .isInstanceOf(IllegalStateException.class);
         }
     }
+
+    @Nested
+    @DisplayName("createListing")
+    class CreateListing {
+        @Test
+        @DisplayName("Sukses: membuat listing DRAFT tanpa file")
+        void success_createsDraft() {
+            Listing newListing = Listing.builder().startingPrice(100.0).build();
+            when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            Listing result = listingService.createListing(newListing, null);
+
+            assertThat(result.getStatus()).isEqualTo(ListingStatus.DRAFT);
+            assertThat(result.getCurrentPrice()).isEqualTo(100.0);
+        }
+
+        @Test
+        @DisplayName("Sukses: membuat listing dengan file gambar")
+        void success_withFiles() throws java.io.IOException {
+            Listing newListing = Listing.builder().startingPrice(100.0).images(new java.util.ArrayList<>()).build();
+            org.springframework.web.multipart.MultipartFile file = mock(org.springframework.web.multipart.MultipartFile.class);
+            when(file.isEmpty()).thenReturn(false);
+            when(file.getOriginalFilename()).thenReturn("test.jpg");
+            when(file.getBytes()).thenReturn(new byte[]{1});
+            when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            Listing result = listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file});
+
+            assertThat(result.getImages()).hasSize(1);
+            assertThat(result.getImages().get(0).isPrimary()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Sukses: abaikan file kosong")
+        void success_skipsEmptyFiles() {
+            Listing newListing = Listing.builder().startingPrice(100.0).images(new java.util.ArrayList<>()).build();
+            org.springframework.web.multipart.MultipartFile file = mock(org.springframework.web.multipart.MultipartFile.class);
+            when(file.isEmpty()).thenReturn(true);
+            when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            Listing result = listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file});
+
+            assertThat(result.getImages()).isEmpty();
+        }
+        
+        @Test
+        @DisplayName("Gagal: IO error saat simpan file")
+        void fail_ioError_throwsException() throws java.io.IOException {
+            Listing newListing = Listing.builder().startingPrice(100.0).images(new java.util.ArrayList<>()).build();
+            org.springframework.web.multipart.MultipartFile file = mock(org.springframework.web.multipart.MultipartFile.class);
+            when(file.isEmpty()).thenReturn(false);
+            when(file.getOriginalFilename()).thenReturn("test.jpg");
+            when(file.getBytes()).thenThrow(new java.io.IOException("Disk full"));
+
+            assertThatThrownBy(() -> listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file}))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Gagal menyimpan file");
+        }
+    }
+
+    @Nested
+    @DisplayName("Read Operations")
+    class ReadOperations {
+        @Test
+        @DisplayName("getAllListings")
+        void testGetAllListings() {
+            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+            when(listingRepository.findAll(pageable)).thenReturn(org.springframework.data.domain.Page.empty());
+
+            listingService.getAllListings(pageable);
+
+            verify(listingRepository).findAll(pageable);
+        }
+
+        @Test
+        @DisplayName("getActiveListings")
+        void testGetActiveListings() {
+            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+            when(listingRepository.findByStatus(ListingStatus.ACTIVE, pageable)).thenReturn(org.springframework.data.domain.Page.empty());
+
+            listingService.getActiveListings(pageable);
+
+            verify(listingRepository).findByStatus(ListingStatus.ACTIVE, pageable);
+        }
+
+        @Test
+        @DisplayName("searchAndFilterListings")
+        void testSearchAndFilterListings() {
+            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+            listingService.searchAndFilterListings("title", null, 0.0, 100.0, ListingStatus.ACTIVE, pageable);
+            verify(listingRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable));
+        }
+    }
+
+    @Nested
+    @DisplayName("updateListing (full)")
+    class UpdateListingFull {
+        @Test
+        @DisplayName("Sukses: update data listing")
+        void success_updatesData() {
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            Listing update = Listing.builder()
+                    .title("New Title")
+                    .description("New Desc")
+                    .category(new id.ac.ui.cs.advprog.bidmartcatalog.model.Category())
+                    .reservePrice(2_000_000.0)
+                    .build();
+
+            Listing result = listingService.updateListing(listingId, update);
+
+            assertThat(result.getTitle()).isEqualTo("New Title");
+            assertThat(result.getDescription()).isEqualTo("New Desc");
+            assertThat(result.getReservePrice()).isEqualTo(2_000_000.0);
+        }
+    }
 }
