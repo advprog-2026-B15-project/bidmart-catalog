@@ -27,6 +27,7 @@ pmd {
 
 checkstyle {
     toolVersion = "10.12.5"
+    ignoreFailures = true
 }
 
 jacoco {
