@@ -29,14 +29,15 @@ function DetailContent() {
     if (id) {
       async function fetchData() {
         try {
-          const listing = await catalogApi.getListing(id);
+          // Ensure id is a string for TypeScript
+          const listingId = id as string;
+          const listing = await catalogApi.getListing(listingId);
           const mappedItem = mapListingToAuctionItem(listing);
           setIt(mappedItem);
           setBidVal(String(mappedItem.price + 50_000));
           
-          // Try to fetch bid history if auction service is up
           try {
-            const auctionBids = await auctionApi.getAuction(id).then(a => a.bids || []);
+            const auctionBids = await auctionApi.getAuction(listingId).then(a => a.bids || []);
             setBids(auctionBids.map((b: any) => ({
               bidder: b.bidderId,
               amount: b.amount,
