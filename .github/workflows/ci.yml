@@ -82,7 +82,7 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.steps.meta.outputs.labels }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   deploy:
     name: Deploy to EC2
