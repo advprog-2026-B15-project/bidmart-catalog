@@ -30,9 +30,10 @@ export default function WalletPage() {
 
   useEffect(() => {
     if (user) {
+      const userId = user.id;
       async function fetchWallet() {
         try {
-          const data = await walletApi.getWallet(user.id);
+          const data = await walletApi.getWallet(userId);
           setWallet(data);
         } catch (err) {
           console.error('Failed to fetch wallet:', err);

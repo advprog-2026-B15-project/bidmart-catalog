@@ -35,9 +35,10 @@ export default function NotifikasiPage() {
 
   useEffect(() => {
     if (user) {
+      const userId = user.id;
       async function fetchNotifs() {
         try {
-          const data = await bookingApi.getNotifications(user.id);
+          const data = await bookingApi.getNotifications(userId);
           const mapped = data.map((n: any) => ({
             id: n.id,
             type: n.type, // e.g. WIN, LOSE, etc.

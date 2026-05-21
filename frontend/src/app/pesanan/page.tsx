@@ -126,15 +126,16 @@ export default function PesananPage() {
 
   useEffect(() => {
     if (user) {
+      const userId = user.id;
       async function fetchOrders() {
         try {
-          const data = await bookingApi.getBookings(user.id);
+          const data = await bookingApi.getBookings(userId);
           const mapped = data.map((o: any) => ({
             id: o.id,
-            role: o.buyerUserId === user.id ? 'buyer' : 'seller',
+            role: o.buyerUserId === userId ? 'buyer' : 'seller',
             status: o.status,
             item: { title: `Listing ${o.listingId}`, art: 'bm-art-elec' }, // Should fetch from catalog if needed
-            counterpart: o.buyerUserId === user.id ? o.sellerUserId : o.buyerUserId,
+            counterpart: o.buyerUserId === userId ? o.sellerUserId : o.buyerUserId,
             price: o.totalAmount,
             when: new Date(o.createdAt).toLocaleDateString(),
             step: o.status === 'CREATED' ? 1 : o.status === 'SHIPPED' ? 2 : 4,
