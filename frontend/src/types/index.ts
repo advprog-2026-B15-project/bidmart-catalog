@@ -152,6 +152,6 @@ export interface Toast {
 }
 
 export interface ModalState {
-  item: AuctionItem | Listing;
+  item: AuctionItem;
   amount: number;
 }
