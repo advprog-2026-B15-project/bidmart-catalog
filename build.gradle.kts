@@ -27,6 +27,9 @@ pmd {
 
 checkstyle {
     toolVersion = "10.12.5"
+}
+
+tasks.withType<Checkstyle>().configureEach {
     ignoreFailures = true
 }
 
