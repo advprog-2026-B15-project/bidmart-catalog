@@ -1,3 +1,0 @@
-# Modul Katalog
-
-PIC: Sean

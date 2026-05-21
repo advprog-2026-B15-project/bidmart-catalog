@@ -1,3 +1,0 @@
-# Modul Pemesanan
-
-PIC: Rabiul

@@ -1,3 +1,0 @@
-# Modul Dompet
-
-PIC: Arya
