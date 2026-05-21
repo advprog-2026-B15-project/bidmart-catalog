@@ -77,4 +77,15 @@ class CategoryTest {
         assertEquals("Books", fullCategory.getName());
         assertEquals(subs, fullCategory.getSubCategories());
     }
-}
+
+    @Test
+    @DisplayName("Test addSubCategory helper method")
+    void testAddSubCategory() {
+        Category parent = new Category();
+        Category sub = new Category();
+        parent.addSubCategory(sub);
+
+        assertTrue(parent.getSubCategories().contains(sub));
+        assertEquals(parent, sub.getParentCategory());
+    }
+    }

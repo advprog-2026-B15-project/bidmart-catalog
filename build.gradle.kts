@@ -6,14 +6,46 @@ val junitJupiterVersion = "5.9.1"
 plugins {
     java
     jacoco
+    pmd
+    checkstyle
     id("org.springframework.boot") version "3.5.11"
     id("io.spring.dependency-management") version "1.1.7"
+    id("org.sonarqube") version "4.4.1.3373"
+    id("org.owasp.dependencycheck") version "9.0.7"
     kotlin("jvm")
 }
 
 group = "id.ac.ui.cs.advprog"
 version = "0.0.1-SNAPSHOT"
 description = "bidmartcatalog"
+
+pmd {
+    isConsoleOutput = true
+    toolVersion = "6.55.0"
+    ruleSets = listOf("category/java/errorprone.xml", "category/java/bestpractices.xml")
+}
+
+checkstyle {
+    toolVersion = "10.12.5"
+}
+
+tasks.withType<Checkstyle>().configureEach {
+    ignoreFailures = true
+}
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+tasks.jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = "0.90".toBigDecimal()
+            }
+        }
+    }
+}
 
 java {
     toolchain {

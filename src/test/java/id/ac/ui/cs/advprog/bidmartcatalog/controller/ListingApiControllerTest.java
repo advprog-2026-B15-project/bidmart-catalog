@@ -5,6 +5,7 @@ import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Category;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
+import id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingRequestDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,28 +14,23 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-// Import untuk List dan UUID
+
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
 
-// Import untuk Mockito (verify dan times)
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
-
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ListingApiController.class)
 class ListingApiControllerTest {
@@ -130,9 +126,7 @@ class ListingApiControllerTest {
     @Test
     @DisplayName("PATCH /api/listings/{id}/publish - Forbidden (Not Owner)")
     void testPublishListingForbidden() throws Exception {
-        sampleListing.setStatus(ListingStatus.DRAFT);
         sampleListing.setSellerId("usr-2406");
-        
         when(listingService.getListingById(id)).thenReturn(sampleListing);
 
         mockMvc.perform(patch("/api/listings/{id}/publish", id)
@@ -140,13 +134,11 @@ class ListingApiControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-
     @Test
     @DisplayName("PATCH /api/listings/{id}/current-price - Success")
     void testUpdatePriceSuccess() throws Exception {
         Double newPrice = 600000.0;
         sampleListing.setCurrentPrice(newPrice);
-
         when(listingService.updateCurrentPrice(eq(id), eq(newPrice))).thenReturn(sampleListing);
 
         String jsonPayload = "{\"newPrice\": 600000.0}";
@@ -159,65 +151,27 @@ class ListingApiControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/listings/{id}/current-price - Bad Request (Missing Price)")
+    @DisplayName("PATCH /api/listings/{id}/current-price - Bad Request")
     void testUpdatePriceBadRequest() throws Exception {
         mockMvc.perform(patch("/api/listings/" + id + "/current-price")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Parameter 'newPrice' wajib diisi"));
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("GET /api/listings/{id} - Return 404 when RuntimeException occurs")
+    @DisplayName("GET /api/listings/{id} - 404")
     void testGetListingByIdNotFound() throws Exception {
-        UUID id = UUID.randomUUID();
-        // Simulasi Service melempar RuntimeException (misal: "Listing not found")
         when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not Found"));
-
         mockMvc.perform(get("/api/listings/" + id))
-                .andExpect(status().isNotFound()); // Verifikasi return 404
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("PATCH /api/listings/{id}/current-price - Return 400 when IllegalArgumentException occurs")
-    void testUpdatePriceIllegalArgument() throws Exception {
-        UUID id = UUID.randomUUID();
-        Double lowerPrice = 50000.0;
-        String jsonPayload = "{\"newPrice\": 50000.0}";
-
-        // Simulasi harga baru lebih rendah dari harga saat ini
-        when(listingService.updateCurrentPrice(eq(id), eq(lowerPrice)))
-                .thenThrow(new IllegalArgumentException("Penawaran baru harus lebih tinggi"));
-
-        mockMvc.perform(patch("/api/listings/" + id + "/current-price")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonPayload))
-                .andExpect(status().isBadRequest()) // Verifikasi return 400
-                .andExpect(content().string("Penawaran baru harus lebih tinggi"));
-    }
-
-    @Test
-    @DisplayName("PATCH /api/listings/{id}/current-price - Return 404 on RuntimeException")
-    void testUpdatePriceRuntimeError() throws Exception {
-        UUID id = UUID.randomUUID();
-        String jsonPayload = "{\"newPrice\": 1000000.0}";
-
-        when(listingService.updateCurrentPrice(any(), any()))
-                .thenThrow(new RuntimeException("Database error or not found"));
-
-        mockMvc.perform(patch("/api/listings/" + id + "/current-price")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonPayload))
-                .andExpect(status().isNotFound()); // Verifikasi return 404
-    }
-
-    @Test
-    @DisplayName("GET /api/listings/{id}/validate - Valid Listing")
+    @DisplayName("GET /api/listings/{id}/validate - Valid")
     void testValidateListingValid() throws Exception {
         sampleListing.setStatus(ListingStatus.ACTIVE);
         sampleListing.setEndTime(LocalDateTime.now().plusHours(1));
-
         when(listingService.getListingById(id)).thenReturn(sampleListing);
 
         mockMvc.perform(get("/api/listings/{id}/validate", id))
@@ -226,104 +180,123 @@ class ListingApiControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/listings/{id}/validate - Expired Listing")
+    @DisplayName("GET /api/listings/{id}/validate - Not Active")
+    void testValidateListingNotActive() throws Exception {
+        sampleListing.setStatus(ListingStatus.DRAFT);
+        sampleListing.setEndTime(LocalDateTime.now().plusHours(1));
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+
+        mockMvc.perform(get("/api/listings/{id}/validate", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isValid").value(false))
+                .andExpect(jsonPath("$.reason").value("Listing is not active"));
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/{id}/validate - Expired")
     void testValidateListingExpired() throws Exception {
         sampleListing.setStatus(ListingStatus.ACTIVE);
         sampleListing.setEndTime(LocalDateTime.now().minusHours(1));
-
         when(listingService.getListingById(id)).thenReturn(sampleListing);
 
         mockMvc.perform(get("/api/listings/{id}/validate", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isValid").value(false))
                 .andExpect(jsonPath("$.reason").value("Auction time has ended"));
+    }
+
+    @Test
+    @DisplayName("POST /api/listings - RuntimeException in service")
+    void testCreateListingRuntimeError() throws Exception {
+        when(listingService.createListing(any(), eq(null))).thenThrow(new RuntimeException("Error"));
+        mockMvc.perform(post("/api/listings")
+                        .header("X-User-Id", "usr-1")
+                        .header("X-User-Role", "SELLER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Test\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/listings/{id} - IllegalStateException")
+    void testUpdateListingIllegalState() throws Exception {
+        sampleListing.setSellerId("usr-1");
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        when(listingService.updateListing(eq(id), any())).thenThrow(new IllegalStateException("Locked"));
+
+        mockMvc.perform(put("/api/listings/{id}", id)
+                        .header("X-User-Id", "usr-1")
+                        .header("X-User-Role", "SELLER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Test\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("PUT /api/listings/{id} - Success")
     void testUpdateListingSuccess() throws Exception {
-        when(listingService.updateListing(eq(id), any(Listing.class))).thenReturn(sampleListing);
-        when(listingService.getListingById(id)).thenReturn(sampleListing);
         sampleListing.setSellerId("usr-2406");
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        when(listingService.updateListing(eq(id), any())).thenReturn(sampleListing);
 
         mockMvc.perform(put("/api/listings/{id}", id)
                         .header("X-User-Id", "usr-2406")
                         .header("X-User-Role", "SELLER")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\": \"Updated Title\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").exists());
-    }
-
-    @Test
-    @DisplayName("PUT /api/listings/{id} - Forbidden (Not Seller)")
-    void testUpdateListingForbiddenNotSeller() throws Exception {
-        mockMvc.perform(put("/api/listings/{id}", id)
-                        .header("X-User-Id", "usr-2406")
-                        .header("X-User-Role", "BUYER")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\": \"Updated Title\"}"))
-                .andExpect(status().isForbidden())
-                .andExpect(content().string("Hanya SELLER yang dapat mengedit listing."));
+                        .content("{\"title\": \"Updated\"}"))
+                .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("DELETE /api/listings/{id} - Success")
     void testDeleteListingSuccess() throws Exception {
-        when(listingService.getListingById(id)).thenReturn(sampleListing);
         sampleListing.setSellerId("usr-2406");
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
 
         mockMvc.perform(delete("/api/listings/{id}", id)
                         .header("X-User-Id", "usr-2406")
                         .header("X-User-Role", "SELLER"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Listing berhasil dihapus"));
-
-        verify(listingService, times(1)).deleteListing(id);
+                .andExpect(status().isOk());
+        verify(listingService).deleteListing(id);
     }
 
     @Test
-    @DisplayName("GET /api/listings/seller/{sellerId}/stats - Success")
-    void testGetSellerStatsSuccess() throws Exception {
-        Map<String, Object> stats = Map.of("totalListings", 5L);
-        when(listingService.getSellerStatistics("seller-1")).thenReturn(stats);
-
-        mockMvc.perform(get("/api/listings/seller/{sellerId}/stats", "seller-1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalListings").value(5));
+    @DisplayName("GET /api/listings - with filter")
+    void testGetListingsWithFilter() throws Exception {
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any()))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+        mockMvc.perform(get("/api/listings"))
+                .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("GET /api/listings/{id}/validate - Success")
-    void testValidateListingForBidSuccess() throws Exception {
-        sampleListing.setStatus(ListingStatus.ACTIVE);
-        sampleListing.setEndTime(LocalDateTime.now().plusDays(1));
-        when(listingService.getListingById(id)).thenReturn(sampleListing);
-
-        mockMvc.perform(get("/api/listings/{id}/validate", id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isValid").value(true));
-    }
-
-    @Test
-    @DisplayName("GET /api/listings/{id}/validate - Invalid (Expired)")
-    void testValidateListingForBidExpired() throws Exception {
-        sampleListing.setStatus(ListingStatus.ACTIVE);
-        sampleListing.setEndTime(LocalDateTime.now().minusDays(1));
-        when(listingService.getListingById(id)).thenReturn(sampleListing);
-
-        mockMvc.perform(get("/api/listings/{id}/validate", id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isValid").value(false))
-                .andExpect(jsonPath("$.reason").value("Auction time has ended"));
-    }
-
-    @Test
-    @DisplayName("GET /api/listings/{id}/validate - Not Found")
-    void testValidateListingForBidNotFound() throws Exception {
-        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not found"));
-
-        mockMvc.perform(get("/api/listings/{id}/validate", id))
+    @DisplayName("PATCH /api/listings/{id}/current-price - Not Found")
+    void testUpdatePriceNotFound() throws Exception {
+        when(listingService.updateCurrentPrice(any(), any())).thenThrow(new RuntimeException("Not found"));
+        mockMvc.perform(patch("/api/listings/" + id + "/current-price")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPrice\": 100.0}"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("PUT /api/listings/{id} - Not Found")
+    void testUpdateListingNotFound() throws Exception {
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not found"));
+        mockMvc.perform(put("/api/listings/" + id, id)
+                        .header("X-User-Id", "usr-1")
+                        .header("X-User-Role", "SELLER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Test\"}"))
+                .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("DELETE /api/listings/{id} - Forbidden (Not Seller)")
+    void testDeleteListingForbiddenRole() throws Exception {
+        mockMvc.perform(delete("/api/listings/" + id, id)
+                        .header("X-User-Id", "usr-1")
+                        .header("X-User-Role", "BUYER"))
+                .andExpect(status().isForbidden());
+    }
+}

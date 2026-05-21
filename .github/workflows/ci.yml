@@ -34,7 +34,18 @@ jobs:
       - name: Run tests with coverage
         run: ./gradlew test jacocoTestReport -Dspring.profiles.active=test --no-daemon
 
-      # Enforce Coverage (70%)
+      # Run Quality Tools
+      - name: Run PMD
+        run: ./gradlew pmdMain pmdTest --no-daemon
+
+      - name: Run Checkstyle
+        run: ./gradlew checkstyleMain checkstyleTest --no-daemon
+
+      - name: Run Dependency Check
+        run: ./gradlew dependencyCheckAnalyze --no-daemon
+        continue-on-error: true # Non-blocking for now
+
+      # Enforce Coverage (90%)
       - name: Check minimum coverage threshold
         run: |
           COVERAGE=$(python3 - << 'EOF'
@@ -56,9 +67,9 @@ jobs:
           EOF
           )
           echo "Instruction coverage: ${COVERAGE}%"
-          is_below=$(echo "$COVERAGE 70" | awk '{if ($1 < $2) print 1; else print 0}')
+          is_below=$(echo "$COVERAGE 90" | awk '{if ($1 < $2) print 1; else print 0}')
           if [ "$is_below" -eq 1 ]; then
-            echo "❌ Coverage ${COVERAGE}% is below the 70% threshold!"
+            echo "❌ Coverage ${COVERAGE}% is below the 90% threshold!"
             exit 1
           fi
 
@@ -83,6 +94,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
 
   deploy:
     name: Deploy to EC2
