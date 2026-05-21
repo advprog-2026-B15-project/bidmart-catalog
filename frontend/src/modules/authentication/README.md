@@ -1,3 +1,0 @@
-# Modul Lelang
-
-PIC: Azka

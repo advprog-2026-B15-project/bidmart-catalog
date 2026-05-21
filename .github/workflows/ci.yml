@@ -4,18 +4,10 @@ on:
   push:
     branches: [ main, staging, milestone100 ]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  test-and-build:
-    name: Test and Build Image
+  test-and-quality:
+    name: Test and Quality Check
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,7 +35,7 @@ jobs:
 
       - name: Run Dependency Check
         run: ./gradlew dependencyCheckAnalyze --no-daemon
-        continue-on-error: true # Non-blocking for now
+        continue-on-error: true
 
       # Enforce Coverage (90%)
       - name: Check minimum coverage threshold
@@ -73,32 +65,9 @@ jobs:
             exit 1
           fi
 
-      # Build and Push Docker Image (only if tests pass)
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-
   deploy:
     name: Deploy to EC2
-    needs: test-and-build
+    needs: test-and-quality
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/milestone100' || github.ref == 'refs/heads/main'
 
@@ -109,20 +78,9 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 30m
           script: |
-            # Remove old host key and add new one to prevent verification issues
-            ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-            
-            # Login to registry on the server
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Go to app directory
             cd ~/bidmart-catalog
-            
-            # Set Image Env and update
-            export DOCKER_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:milestone100
-            docker compose pull app
-            docker compose up -d
-            
-            # Clean up old images
+            git pull origin milestone100
+            docker compose up -d --build
             docker image prune -f
