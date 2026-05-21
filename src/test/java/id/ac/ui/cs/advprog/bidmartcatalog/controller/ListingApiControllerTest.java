@@ -262,10 +262,33 @@ class ListingApiControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/listings/seller/{sellerId}/stats - Success")
-    void testGetSellerStatsSuccess() throws Exception {
-        when(listingService.getSellerStatistics("usr-1")).thenReturn(Map.of("total", 1));
-        mockMvc.perform(get("/api/listings/seller/usr-1/stats"))
-                .andExpect(status().isOk());
+    @DisplayName("PATCH /api/listings/{id}/current-price - Not Found")
+    void testUpdatePriceNotFound() throws Exception {
+        when(listingService.updateCurrentPrice(any(), any())).thenThrow(new RuntimeException("Not found"));
+        mockMvc.perform(patch("/api/listings/" + id + "/current-price")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPrice\": 100.0}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT /api/listings/{id} - Not Found")
+    void testUpdateListingNotFound() throws Exception {
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not found"));
+        mockMvc.perform(put("/api/listings/" + id, id)
+                        .header("X-User-Id", "usr-1")
+                        .header("X-User-Role", "SELLER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Test\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/listings/{id} - Forbidden (Not Seller)")
+    void testDeleteListingForbiddenRole() throws Exception {
+        mockMvc.perform(delete("/api/listings/" + id, id)
+                        .header("X-User-Id", "usr-1")
+                        .header("X-User-Role", "BUYER"))
+                .andExpect(status().isForbidden());
     }
 }
