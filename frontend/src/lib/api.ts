@@ -1,11 +1,11 @@
 import { AuctionItem } from '@/types';
 
 const API_BASE_URLS = {
-  catalog: process.env.NEXT_PUBLIC_CATALOG_URL || 'http://98.93.134.192:8082',
-  auth: process.env.NEXT_PUBLIC_AUTH_URL || 'http://98.93.134.192:8081',
-  auction: process.env.NEXT_PUBLIC_AUCTION_URL || 'http://98.93.134.192:8083',
-  wallet: process.env.NEXT_PUBLIC_WALLET_URL || 'http://98.93.134.192:8084',
-  booking: process.env.NEXT_PUBLIC_BOOKING_URL || 'http://98.93.134.192:8085',
+  catalog: process.env.NEXT_PUBLIC_CATALOG_URL || 'http://54.164.111.51:8082',
+  auth: process.env.NEXT_PUBLIC_AUTH_URL || 'http://54.164.111.51:8081',
+  auction: process.env.NEXT_PUBLIC_AUCTION_URL || 'http://54.164.111.51:8083',
+  wallet: process.env.NEXT_PUBLIC_WALLET_URL || 'http://54.164.111.51:8084',
+  booking: process.env.NEXT_PUBLIC_BOOKING_URL || 'http://54.164.111.51:8085',
 };
 
 type Service = keyof typeof API_BASE_URLS;
