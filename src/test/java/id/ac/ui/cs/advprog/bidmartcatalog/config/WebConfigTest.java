@@ -25,10 +25,22 @@ class WebConfigTest {
     @Test
     @DisplayName("Test Resource Handler for /uploads/**")
     void testUploadsResourceHandler() throws Exception {
-        // Mengetes apakah endpoint /uploads/ terdaftar.
-        // Kita ekspektasikan 404 (Not Found) bukan 403 (Forbidden) atau 405,
-        // karena foldernya mungkin kosong, tapi handler-nya harus ada.
         mockMvc.perform(get("/uploads/test-image.jpg"))
                 .andExpect(status().isNotFound());
     }
-}
+
+    @Test
+    @DisplayName("Test SPA routing - Access /login should serve index.html (fallback)")
+    void testSPARouting() throws Exception {
+        // Since we have a real index.html now, it should return 200 OK
+        mockMvc.perform(get("/login"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Test static resource with extension should NOT trigger SPA fallback")
+    void testStaticResourceWithExtension() throws Exception {
+        mockMvc.perform(get("/css/style.css"))
+                .andExpect(status().isNotFound());
+    }
+    }

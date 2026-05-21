@@ -292,4 +292,38 @@ class ListingApiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalListings").value(5));
     }
-}
+
+    @Test
+    @DisplayName("GET /api/listings/{id}/validate - Success")
+    void testValidateListingForBidSuccess() throws Exception {
+        sampleListing.setStatus(ListingStatus.ACTIVE);
+        sampleListing.setEndTime(LocalDateTime.now().plusDays(1));
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+
+        mockMvc.perform(get("/api/listings/{id}/validate", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isValid").value(true));
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/{id}/validate - Invalid (Expired)")
+    void testValidateListingForBidExpired() throws Exception {
+        sampleListing.setStatus(ListingStatus.ACTIVE);
+        sampleListing.setEndTime(LocalDateTime.now().minusDays(1));
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+
+        mockMvc.perform(get("/api/listings/{id}/validate", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isValid").value(false))
+                .andExpect(jsonPath("$.reason").value("Auction time has ended"));
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/{id}/validate - Not Found")
+    void testValidateListingForBidNotFound() throws Exception {
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not found"));
+
+        mockMvc.perform(get("/api/listings/{id}/validate", id))
+                .andExpect(status().isNotFound());
+    }
+    }
