@@ -42,3 +42,25 @@ Proyek ini mengimplementasikan seluruh kriteria kualitas perangkat lunak dengan 
 *   **Profiling:** Pemantauan performa dan pemakaian sumber daya melalui **Spring Boot Actuator** dan metrik **Prometheus**.
 
 Integrasi laporan kualitas secara terpadu dapat diakses melalui **SonarCloud/SonarQube** dashboard (jika dikonfigurasi).
+
+## 5. Load Testing & Analisis Performa Arsitektur (Skala 4)
+Proyek ini telah melakukan pengujian performa lanjutan (*Load Testing*) menggunakan **k6** untuk mensimulasikan beban pengguna dan memvalidasi ketahanan arsitektur (*Software Architecture* pencapaian Skala 4).
+
+### 5.1. Skenario Pengujian
+Pengujian dilakukan pada *endpoint* utama katalog yang terdapat pada `scripts/load-test.js` dengan skenario:
+- **Target Beban:** Bertahap hingga 50 Virtual Users (VUs) secara simultan.
+- **Durasi:** 2 menit (Ramp-up 30s, Peak 1m, Ramp-down 30s).
+- **Endpoint yang diuji:** `GET /api/listings`, `GET /api/listings?title=...`, dan `GET /api/categories`.
+
+### 5.2. Hasil Pengujian
+
+![img.png](img.png)
+
+Sistem menunjukkan performa yang sangat stabil di bawah beban puncak:
+- **Reliabilitas:** 100% *requests* berhasil diproses tanpa *error* (0% *failed requests*).
+- **Latensi (Kecepatan):** 95% dari seluruh *request* diselesaikan di bawah **19 milidetik** (p(95) = ~18.5ms), jauh di bawah batas toleransi yang ditetapkan yaitu 500ms.
+- **Throughput:** Sistem dengan mudah melayani keseluruhan lalu lintas beban dengan stabil (mempertimbangkan *sleep delay* antar *request* dalam simulasi perilaku pengguna nyata).
+
+### 5.3. Justifikasi & Observabilitas
+- **Validasi Arsitektur (Skala 4):** Hasil pengujian ini membuktikan efektivitas arsitektur yang dibangun, termasuk pembatasan sumber daya memori (*resource limits* 384MB pada konfigurasi Docker) yang tetap mampu memberikan respons optimal. Pengujian ini juga memvalidasi efisiensi *query* pada sistem pencarian dan kategori.
+- **Monitoring (Skala 4):** Selama beban tinggi berlangsung, metrik trafik sistem (*throughput*, *latency*, dan *error rate*) terekam dan diobservasi secara langsung melalui *endpoint* Spring Boot Actuator (`/actuator/prometheus`), memenuhi kriteria observabilitas untuk diintegrasikan lebih lanjut ke *dashboard* pemantauan.
