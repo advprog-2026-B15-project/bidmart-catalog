@@ -24,10 +24,10 @@ export const options = {
   },
 };
 
-const BASE_URL = 'http://localhost:8082';
+const BASE_URL = 'http://54.164.111.51:8082';
 
 export default function () {
-  // --- 1. Melihat Katalog Utama ---
+  // Melihat katalog utama
   const resListings = http.get(`${BASE_URL}/api/listings`);
   check(resListings, {
     'listings status is 200': (r) => r.status === 200,
@@ -35,15 +35,14 @@ export default function () {
   });
   sleep(1);
 
-  // --- 2. Mencari Barang Spesifik ---
-  // Mengambil title secara random dari daftar barang (simulasi)
+  // Mencari barang spesifik
   const resSearch = http.get(`${BASE_URL}/api/listings?title=MacBook`);
   check(resSearch, {
     'search status is 200': (r) => r.status === 200,
   });
   sleep(1);
 
-  // --- 3. Melihat Kategori ---
+  // Melihat kategori
   const resCategories = http.get(`${BASE_URL}/api/categories`);
   check(resCategories, {
     'categories status is 200': (r) => r.status === 200,
