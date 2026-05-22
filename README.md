@@ -88,3 +88,31 @@ public class ListingController {
 *(Lihat gambar arsitektur `img_2.png` untuk kondisi sebelum, dan `img_1.png` untuk kondisi sesudah refactoring).*
 
 ## 6. Load Testing & Analisis Performa Arsitektur (Skala 4)
+Proyek ini telah melakukan pengujian performa lanjutan (*Load Testing*) menggunakan **k6** untuk mensimulasikan beban pengguna dan memvalidasi ketahanan arsitektur (*Software Architecture* pencapaian Skala 4).
+
+### 6.1. Skenario Pengujian
+Pengujian dilakukan pada *endpoint* utama katalog yang terdapat pada `scripts/load-test.js` dengan skenario:
+- **Target Beban:** Bertahap hingga 50 Virtual Users (VUs) secara simultan.
+- **Durasi:** 2 menit (Ramp-up 30s, Peak 1m, Ramp-down 30s).
+- **Endpoint yang diuji:** `GET /api/listings`, `GET /api/listings?title=...`, dan `GET /api/categories`.
+
+### 6.2. Simulasi Manfaat Arsitektur Tambahan: Caching
+Untuk memenuhi kriteria **Software Architecture Skala 4**, dilakukan simulasi pembandingan manfaat arsitektur **In-Process Caching (Caffeine)** dengan membandingkan kondisi *Baseline* (Tanpa Cache) dan kondisi *Optimized* (Dengan Caffeine).
+
+**Hasil Perbandingan (Beban 50 VUs):**
+
+| Metrik | Tanpa Cache (Baseline) | Dengan Caffeine Cache | Perbaikan |
+| :--- | :---: | :---: | :---: |
+| **Latensi p(95)** | 26.57 ms | **14.68 ms** | **~45% lebih cepat** |
+| **Latensi Rata-rata** | 14.23 ms | **9.94 ms** | **~30% lebih cepat** |
+| **Latensi Maksimum** | 2.48 s | **0.61 s** | **~75% lebih konsisten** |
+
+**Analisis Simulasi:**
+Penggunaan Caffeine Cache terbukti secara signifikan mengurangi latensi *tail* (p95) dan menghilangkan lonjakan latensi ekstrim (*latency spikes*) dari 2.4 detik menjadi hanya 0.6 detik. Hal ini membuktikan bahwa arsitektur caching yang diterapkan berhasil menjaga konsistensi performa aplikasi dan mengurangi beban pemrosesan pada lapisan database, yang sangat krusial untuk skalabilitas sistem lelang.
+
+*   **Tanpa Cache:** ![img_3.png](img_3.png)
+*   **Dengan Cache:** ![img_4.png](img_4.png)
+
+### 6.3. Justifikasi & Observabilitas
+- **Validasi Arsitektur:** Hasil pengujian ini membuktikan efektivitas arsitektur yang dibangun, termasuk pembatasan sumber daya memori (*resource limits* 384MB pada konfigurasi Docker) yang tetap mampu memberikan respons optimal. Pengujian ini juga memvalidasi efisiensi *query* pada sistem pencarian dan kategori.
+- **Monitoring (Skala 4):** Selama beban tinggi berlangsung, metrik trafik sistem (*throughput*, *latency*, dan *error rate*) terekam dan diobservasi secara langsung melalui *endpoint* Spring Boot Actuator (`/actuator/prometheus`), memenuhi kriteria observabilitas untuk diintegrasikan lebih lanjut ke *dashboard* pemantauan.
