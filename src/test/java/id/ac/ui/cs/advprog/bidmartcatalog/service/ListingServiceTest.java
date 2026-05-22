@@ -30,7 +30,8 @@ import static org.mockito.Mockito.when;
 class ListingServiceTest {
 
     @Mock ListingRepository listingRepository;
-    @InjectMocks ListingService listingService;
+    @Mock StorageService storageService;
+    @InjectMocks ListingServiceImpl listingService;
 
     private Listing activeListing;
     private UUID listingId;
@@ -261,14 +262,14 @@ class ListingServiceTest {
             Listing newListing = Listing.builder().startingPrice(100.0).images(new java.util.ArrayList<>()).build();
             org.springframework.web.multipart.MultipartFile file = mock(org.springframework.web.multipart.MultipartFile.class);
             when(file.isEmpty()).thenReturn(false);
-            when(file.getOriginalFilename()).thenReturn("test.jpg");
-            when(file.getBytes()).thenReturn(new byte[]{1});
+            when(storageService.store(file)).thenReturn("/uploads/test.jpg");
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
             Listing result = listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file});
 
             assertThat(result.getImages()).hasSize(1);
             assertThat(result.getImages().get(0).isPrimary()).isTrue();
+            assertThat(result.getImages().get(0).getImageUrl()).isEqualTo("/uploads/test.jpg");
         }
 
         @Test
@@ -290,8 +291,7 @@ class ListingServiceTest {
             Listing newListing = Listing.builder().startingPrice(100.0).images(new java.util.ArrayList<>()).build();
             org.springframework.web.multipart.MultipartFile file = mock(org.springframework.web.multipart.MultipartFile.class);
             when(file.isEmpty()).thenReturn(false);
-            when(file.getOriginalFilename()).thenReturn("test.jpg");
-            when(file.getBytes()).thenThrow(new java.io.IOException("Disk full"));
+            when(storageService.store(file)).thenThrow(new java.io.IOException("Disk full"));
 
             assertThatThrownBy(() -> listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file}))
                     .isInstanceOf(RuntimeException.class)

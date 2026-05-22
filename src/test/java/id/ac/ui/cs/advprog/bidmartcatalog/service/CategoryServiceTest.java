@@ -25,7 +25,7 @@ class CategoryServiceTest {
     private CategoryRepository categoryRepository;
 
     @InjectMocks
-    private CategoryService categoryService;
+    private CategoryServiceImpl categoryService;
 
     private Category sampleCategory;
     private UUID categoryId;

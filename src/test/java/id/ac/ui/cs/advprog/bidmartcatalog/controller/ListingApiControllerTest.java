@@ -77,16 +77,17 @@ class ListingApiControllerTest {
         createdListing.setStatus(ListingStatus.DRAFT);
         createdListing.setSellerId("usr-2406");
 
-        when(listingService.createListing(any(Listing.class), eq(null))).thenReturn(createdListing);
+        when(listingService.createListing(any(Listing.class), any())).thenReturn(createdListing);
         when(categoryService.getCategoryById(any(UUID.class))).thenReturn(new Category());
 
-        String jsonPayload = "{\"title\": \"New Listing\", \"description\": \"Desc\", \"startingPrice\": 10000.0, \"categoryId\": \"" + UUID.randomUUID() + "\", \"endTime\": \"2024-12-31T23:59:59\"}";
-
-        mockMvc.perform(post("/api/listings")
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/listings")
                         .header("X-User-Id", "usr-2406")
                         .header("X-User-Role", "SELLER")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonPayload))
+                        .param("title", "New Listing")
+                        .param("description", "Desc")
+                        .param("startingPrice", "10000.0")
+                        .param("categoryId", UUID.randomUUID().toString())
+                        .param("endTime", "2024-12-31T23:59:59"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.title").value("New Listing"));
@@ -95,11 +96,9 @@ class ListingApiControllerTest {
     @Test
     @DisplayName("POST /api/listings - Forbidden (Not Seller)")
     void testCreateListingForbidden() throws Exception {
-        mockMvc.perform(post("/api/listings")
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/listings")
                         .header("X-User-Id", "usr-2406")
-                        .header("X-User-Role", "BUYER")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .header("X-User-Role", "BUYER"))
                 .andExpect(status().isForbidden());
     }
 
@@ -208,12 +207,11 @@ class ListingApiControllerTest {
     @Test
     @DisplayName("POST /api/listings - RuntimeException in service")
     void testCreateListingRuntimeError() throws Exception {
-        when(listingService.createListing(any(), eq(null))).thenThrow(new RuntimeException("Error"));
-        mockMvc.perform(post("/api/listings")
+        when(listingService.createListing(any(), any())).thenThrow(new RuntimeException("Error"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/listings")
                         .header("X-User-Id", "usr-1")
                         .header("X-User-Role", "SELLER")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"Test\"}"))
+                        .param("title", "Test"))
                 .andExpect(status().isBadRequest());
     }
 
