@@ -24,7 +24,7 @@ export const options = {
   },
 };
 
-const BASE_URL = 'http://localhost:8082';
+const BASE_URL = 'http://54.164.111.51:8082';
 
 export default function () {
   // --- 1. Melihat Katalog Utama ---
