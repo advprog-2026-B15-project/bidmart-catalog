@@ -57,24 +57,34 @@ Proyek ini mengimplementasikan berbagai *design pattern* standar untuk menjamin 
 *   **Dependency Injection (DI):** Menggunakan konstruktor (via Lombok `@RequiredArgsConstructor`) untuk menyuntikkan dependensi, sehingga mengurangi ketergantungan antar-komponen (*loose coupling*).
 *   **Strategy Pattern:** Diterapkan pada logika penyimpanan melalui interface `StorageService`, memungkinkan fleksibilitas untuk berganti antara penyimpanan lokal (`LocalStorageService`) atau layanan *cloud* di masa depan.
 
+### 5.1. Peningkatan Kualitas Desain Berdasarkan SOLID (Pencapaian Skala 4)
+Sebagai upaya mendalam untuk meningkatkan aspek *maintainability* (kemudahan pemeliharaan) dan *testability* (kemudahan pengujian), arsitektur direfaktor untuk secara ketat mematuhi **Dependency Inversion Principle (DIP)** dari SOLID.
+
+**Kondisi Sebelum (Before):**
+Sebelum refactoring, `ListingController` bergantung langsung pada implementasi konkret (*concrete classes*) dari *service layer*.
+```java
+public class ListingController {
+    private final ListingServiceImpl listingService;
+    private final CategoryRepository categoryRepository;
+    private final CategoryServiceImpl categoryService; 
+}
+```
+*Kelemahan:* Ketergantungan pada implementasi konkret menyebabkan *tight coupling* (keterikatan tinggi). Hal ini menyulitkan pembuatan *mock* saat *unit testing* dan melanggar prinsip desain bahwa modul tingkat tinggi tidak boleh bergantung pada modul tingkat rendah.
+
+**Kondisi Sesudah (After):**
+Desain diperbaiki dengan mengubah ketergantungan mengarah pada abstraksi (*interfaces*).
+```java
+public class ListingController {
+    private final ListingService listingService;
+    private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService; 
+}
+```
+*Justifikasi Peningkatan Kualitas:*
+1. **Loose Coupling:** Controller kini tidak perlu tahu bagaimana `ListingService` diimplementasikan. Jika di masa depan tim memutuskan untuk mengganti logika implementasi (misalnya `ListingServiceV2Impl`), Controller tidak perlu diubah sama sekali.
+2. **Testability:** Menggunakan *interface* sangat mempermudah pembuatan objek tiruan (*mocks*) menggunakan Mockito dalam pengujian unit Controller, memisahkan pengujian logika *routing* dari logika bisnis.
+3. **Standarisasi Kontrak:** *Interface* bertindak sebagai kontrak yang jelas (*API contract*) bagi seluruh anggota tim, memastikan standar kualitas implementasi terjaga tanpa merusak fungsionalitas komponen lain yang memanggilnya.
+
+*(Lihat gambar arsitektur `img_2.png` untuk kondisi sebelum, dan `img_1.png` untuk kondisi sesudah refactoring).*
+
 ## 6. Load Testing & Analisis Performa Arsitektur (Skala 4)
-Proyek ini telah melakukan pengujian performa lanjutan (*Load Testing*) menggunakan **k6** untuk mensimulasikan beban pengguna dan memvalidasi ketahanan arsitektur (*Software Architecture* pencapaian Skala 4).
-
-### 6.1. Skenario Pengujian
-Pengujian dilakukan pada *endpoint* utama katalog yang terdapat pada `scripts/load-test.js` dengan skenario:
-- **Target Beban:** Bertahap hingga 50 Virtual Users (VUs) secara simultan.
-- **Durasi:** 2 menit (Ramp-up 30s, Peak 1m, Ramp-down 30s).
-- **Endpoint yang diuji:** `GET /api/listings`, `GET /api/listings?title=...`, dan `GET /api/categories`.
-
-### 6.2. Hasil Pengujian
-
-![img.png](img.png)
-### 6.2. Hasil Pengujian (Live AWS Deployment)
-Sistem menunjukkan performa yang sangat stabil di bawah beban puncak saat diuji langsung pada *instance* AWS EC2:
-- **Reliabilitas:** 100% *requests* berhasil diproses tanpa *error* (0% *failed requests*).
-- **Latensi (Kecepatan):** 95% dari seluruh *request* diselesaikan di bawah **297 milidetik** (p(95) = ~296.98ms). Angka ini menunjukkan performa yang sangat baik mengingat adanya latensi jaringan publik, dan tetap berada di bawah ambang batas toleransi 500ms.
-- **Throughput:** Sistem melayani ~2013 total request selama durasi pengujian dengan stabil tanpa adanya penurunan performa yang signifikan.
-
-### 6.3. Justifikasi & Observabilitas
-- **Validasi Arsitektur (Skala 4):** Hasil pengujian ini membuktikan efektivitas arsitektur yang dibangun, termasuk pembatasan sumber daya memori (*resource limits* 384MB pada konfigurasi Docker) yang tetap mampu memberikan respons optimal. Pengujian ini juga memvalidasi efisiensi *query* pada sistem pencarian dan kategori.
-- **Monitoring (Skala 4):** Selama beban tinggi berlangsung, metrik trafik sistem (*throughput*, *latency*, dan *error rate*) terekam dan diobservasi secara langsung melalui *endpoint* Spring Boot Actuator (`/actuator/prometheus`), memenuhi kriteria observabilitas untuk diintegrasikan lebih lanjut ke *dashboard* pemantauan.
