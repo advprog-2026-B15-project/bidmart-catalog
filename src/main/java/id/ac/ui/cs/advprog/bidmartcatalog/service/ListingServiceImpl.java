@@ -6,6 +6,7 @@ import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingRepository;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingSpecification;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ListingServiceImpl implements ListingService {
 
@@ -104,9 +106,17 @@ public class ListingServiceImpl implements ListingService {
             ListingStatus status,
             Pageable pageable) {
 
+        org.springframework.util.StopWatch sw = new org.springframework.util.StopWatch();
+        sw.start("ListingSearch");
+
         Specification<Listing> spec =
                 ListingSpecification.filterListings(title, categoryIds, minPrice, maxPrice, status);
-        return listingRepository.findAll(spec, pageable);
+        Page<Listing> result = listingRepository.findAll(spec, pageable);
+
+        sw.stop();
+        log.info("[PROFILING] Search took: {} ms", sw.getTotalTimeMillis());
+
+        return result;
     }
 
     @Override
