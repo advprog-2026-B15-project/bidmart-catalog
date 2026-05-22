@@ -17,7 +17,6 @@ CURRENT_COMMIT=$(git rev-parse HEAD)
 echo "Current failed commit: $CURRENT_COMMIT"
 
 # Revert satu commit ke belakang secara otomatis (hard reset ke HEAD~1)
-# Peringatan: Ini akan menghapus perubahan yang tidak di-commit di server.
 git reset --hard HEAD~1
 
 # 4. Restart services with clean build

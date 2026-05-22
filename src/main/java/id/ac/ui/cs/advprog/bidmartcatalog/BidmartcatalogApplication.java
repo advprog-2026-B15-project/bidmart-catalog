@@ -7,10 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class BidmartcatalogApplication {
 
     public static void main(String[] args) {
-
-        throw new RuntimeException("Sengaja Merusak Aplikasi untuk Demo Rollback");
-
-//        SpringApplication.run(BidmartcatalogApplication.class, args);
+        SpringApplication.run(BidmartcatalogApplication.class, args);
     }
 
 }
