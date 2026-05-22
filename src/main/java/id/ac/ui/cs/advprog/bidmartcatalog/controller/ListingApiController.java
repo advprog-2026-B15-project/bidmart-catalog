@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,12 +50,13 @@ public class ListingApiController {
      * Endpoint: POST /api/listings
      * Membuat listing lelang baru berstatus DRAFT.
      */
-    @Operation(summary = "Buat Listing Baru", description = "Membuat listing lelang baru dengan status DRAFT")
-    @PostMapping
+    @Operation(summary = "Buat Listing Baru", description = "Membuat listing lelang baru dengan status DRAFT (Mendukung Unggah Gambar)")
+    @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<?> createListing(
             @RequestHeader(value = "X-User-Id", required = true) String sellerId,
             @RequestHeader(value = "X-User-Role", required = true) String role,
-            @RequestBody ListingRequestDTO request) {
+            @ModelAttribute ListingRequestDTO request,
+            @RequestParam(value = "imageFiles", required = false) org.springframework.web.multipart.MultipartFile[] files) {
 
         if (!"SELLER".equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat membuat listing.");
@@ -74,7 +76,7 @@ public class ListingApiController {
                 listing.setCategory(category);
             }
 
-            Listing createdListing = listingService.createListing(listing, null);
+            Listing createdListing = listingService.createListing(listing, files);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdListing);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -153,8 +155,18 @@ public class ListingApiController {
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) ListingStatus status,
+            @RequestHeader(value = "X-User-Role", required = false) String role,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+
+        // Default ke ACTIVE jika tidak ditentukan (Katalog Publik)
+        ListingStatus filterStatus = (status != null) ? status : ListingStatus.ACTIVE;
+
+        // Security check: Hanya SELLER atau admin (internal) yang boleh melihat DRAFT
+        if (filterStatus != ListingStatus.ACTIVE && !"SELLER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         List<UUID> categoryIds = new ArrayList<>();
 
@@ -164,7 +176,7 @@ public class ListingApiController {
         }
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
-                title, categoryIds, minPrice, maxPrice, ListingStatus.ACTIVE, PageRequest.of(page, size));
+                title, categoryIds, minPrice, maxPrice, filterStatus, PageRequest.of(page, size));
 
         return ResponseEntity.ok(searchResults);
     }

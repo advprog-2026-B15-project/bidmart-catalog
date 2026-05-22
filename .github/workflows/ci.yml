@@ -77,9 +77,13 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key:   ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 30m
           script: |
+            # Update known hosts
+            mkdir -p ~/.ssh
+            ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+            
             cd ~/bidmart-catalog
             git pull origin milestone100
             docker compose up -d --build
