@@ -37,7 +37,10 @@ Proyek ini mengimplementasikan seluruh kriteria kualitas perangkat lunak dengan 
 *   **Clean Code:** Penegakan standar kode menggunakan **PMD** dan **Checkstyle** untuk menjaga keterbacaan dan struktur kode yang baik.
 *   **Unit Testing:** Implementasi lebih dari 100 kasus uji unit menggunakan JUnit 5 dengan cakupan instruksi (**Instruction Coverage**) sebesar **92%** (diverifikasi melalui JaCoCo).
 *   **Functional Testing:** Pengujian fungsionalitas antarmuka dan alur pengguna menggunakan **Selenium** (terdapat pada `CatalogFunctionalTest`).
-*   **Regression Testing:** Seluruh pengujian dijalankan secara otomatis dalam alur **CI/CD** pada setiap *push* dan *pull request* untuk mencegah regresi fitur.
+*   **Regression Testing:** Seluruh pengujian dijalankan secara otomatis dalam alur **CI/CD** pada setiap *push* dan *pull request* untuk mencegah regresi fitur. Proyek ini menggunakan strategi **Automated Regression Suite** yang mencakup:
+    *   **Unit & Integration Regression:** Memastikan logika bisnis dan integrasi antar komponen tetap berjalan benar setelah adanya perubahan kode.
+    *   **Functional Regression (Selenium):** Pengujian alur pengguna (*end-to-end*) secara otomatis untuk memastikan antarmuka tetap berfungsi.
+    *   **Otomatisasi Pipeline:** Menggunakan GitHub Actions sebagai *test runner* yang menjamin setiap *commit* baru tidak merusak (*break*) fitur yang sudah ada sebelumnya.
 *   **Secure Coding:** Audit keamanan dependensi secara berkala menggunakan **OWASP Dependency Check** untuk mendeteksi kerentanan (*vulnerabilities*).
 *   **Profiling:** Pemantauan performa dan pemakaian sumber daya melalui **Spring Boot Actuator** dan metrik **Prometheus**.
 
