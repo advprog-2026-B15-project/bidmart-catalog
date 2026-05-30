@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -36,6 +37,7 @@ public class ListingImage {
     @Column(nullable = false)
     private boolean isPrimary; // Untuk menandai gambar utama
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "listing_id", nullable = false)
     private Listing listing;
