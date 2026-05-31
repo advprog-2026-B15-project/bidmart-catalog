@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -278,6 +281,37 @@ class ListingApiControllerTest {
     }
 
     @Test
+    @DisplayName("PATCH /api/listings/{id}/current-price - Illegal Argument")
+    void testUpdatePriceIllegalArgument() throws Exception {
+        when(listingService.updateCurrentPrice(any(), any())).thenThrow(new IllegalArgumentException("Invalid price"));
+        mockMvc.perform(patch("/api/listings/" + id + "/current-price")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPrice\": -100.0}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Invalid price"));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/publish - Not Found")
+    void testPublishListingNotFound() throws Exception {
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not found"));
+        mockMvc.perform(patch("/api/listings/{id}/publish", id)
+                        .header("X-User-Id", "usr-1"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/seller/{sellerId}/stats - Success")
+    void testGetSellerStats() throws Exception {
+        Map<String, Object> stats = Map.of("ACTIVE", 5);
+        when(listingService.getSellerStatistics("usr-1")).thenReturn(stats);
+
+        mockMvc.perform(get("/api/listings/seller/usr-1/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ACTIVE").value(5));
+    }
+
+    @Test
     @DisplayName("PUT /api/listings/{id} - Not Found")
     void testUpdateListingNotFound() throws Exception {
         when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not found"));
@@ -290,11 +324,67 @@ class ListingApiControllerTest {
     }
 
     @Test
+    @DisplayName("DELETE /api/listings/{id} - Not Found")
+    void testDeleteListingNotFound() throws Exception {
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not found"));
+        mockMvc.perform(delete("/api/listings/" + id, id)
+                        .header("X-User-Id", "usr-1")
+                        .header("X-User-Role", "SELLER"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/{id}/validate - Not Found")
+    void testValidateListingNotFound() throws Exception {
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Not found"));
+        mockMvc.perform(get("/api/listings/{id}/validate", id))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/listings/{id} - Forbidden (Not Owner)")
+    void testDeleteListingForbiddenOwner() throws Exception {
+        sampleListing.setSellerId("owner");
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+
+        mockMvc.perform(delete("/api/listings/" + id, id)
+                        .header("X-User-Id", "not-owner")
+                        .header("X-User-Role", "SELLER"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("DELETE /api/listings/{id} - Forbidden (Not Seller)")
     void testDeleteListingForbiddenRole() throws Exception {
         mockMvc.perform(delete("/api/listings/" + id, id)
                         .header("X-User-Id", "usr-1")
                         .header("X-User-Role", "BUYER"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /api/listings - Various Filters")
+    void testGetAllListingsWithFilters() throws Exception {
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(sampleListing)));
+
+        mockMvc.perform(get("/api/listings")
+                        .param("keyword", "test")
+                        .param("minPrice", "10.0")
+                        .param("maxPrice", "100.0")
+                        .param("status", "ACTIVE")
+                        .param("sellerId", "usr-1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/listings - Empty Result")
+    void testGetAllListingsEmpty() throws Exception {
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any()))
+                .thenReturn(Page.empty());
+
+        mockMvc.perform(get("/api/listings"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(0));
     }
 }
