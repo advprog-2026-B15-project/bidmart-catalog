@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Category;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import java.util.Arrays;
 import java.util.List;
 
@@ -152,6 +153,7 @@ class ListingControllerTest {
     void testEditListingForm() throws Exception {
         UUID id = UUID.randomUUID();
         Listing listing = new Listing();
+        listing.setStatus(ListingStatus.DRAFT);
         when(listingService.getListingById(id)).thenReturn(listing);
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(List.of());
 
@@ -159,6 +161,31 @@ class ListingControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("edit-listing"))
                 .andExpect(model().attribute("listing", listing));
+    }
+
+    @Test
+    @DisplayName("GET /listings/{id}/edit - Forbidden (Has Bids)")
+    void testEditListingFormForbidden() throws Exception {
+        UUID id = UUID.randomUUID();
+        Listing listing = new Listing();
+        listing.setBidCount(1);
+        when(listingService.getListingById(id)).thenReturn(listing);
+
+        mockMvc.perform(get("/listings/" + id + "/edit"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/listings/" + id))
+                .andExpect(flash().attribute("error", "Tidak bisa mengedit: Sudah ada penawaran!"));
+    }
+
+    @Test
+    @DisplayName("GET /listings/{id}/edit - Exception")
+    void testEditListingFormException() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("Error"));
+
+        mockMvc.perform(get("/listings/" + id + "/edit"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/listings"));
     }
 
     @Test

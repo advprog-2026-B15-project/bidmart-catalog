@@ -124,12 +124,28 @@ Untuk memenuhi kriteria **Software Architecture Skala 4**, dilakukan simulasi pe
 | **Latensi Rata-rata** | 14.23 ms | **9.94 ms** | **~30% lebih cepat** |
 | **Latensi Maksimum** | 2.48 s | **0.61 s** | **~75% lebih konsisten** |
 
-**Analisis Simulasi:**
-Penggunaan Caffeine Cache terbukti secara signifikan mengurangi latensi *tail* (p95) dan menghilangkan lonjakan latensi ekstrim (*latency spikes*) dari 2.4 detik menjadi hanya 0.6 detik. Hal ini membuktikan bahwa arsitektur caching yang diterapkan berhasil menjaga konsistensi performa aplikasi dan mengurangi beban pemrosesan pada lapisan database, yang sangat krusial untuk skalabilitas sistem lelang.
+#### **6.3. Analisis Skor APDEX (Application Performance Index)**
+Berdasarkan hasil load test *Optimized* (dengan cache), sistem mencapai performa sebagai berikut (Threshold $T = 100ms$):
+- **Satisfied (< 100ms):** 2408 requests
+- **Tolerating (100ms - 400ms):** 0 requests
+- **Frustrated (> 400ms):** 1 request (Max 607ms)
+- **Skor APDEX:** $(2408 + (0/2)) / 2409 = \mathbf{0.99}$
 
-*   **Tanpa Cache:** ![img_3.png](img_3.png)
-*   **Dengan Cache:** ![img_4.png](img_4.png)
+Skor **0.99** menunjukkan tingkat kepuasan pengguna yang sangat baik (*Excellent*), membuktikan stabilitas arsitektur katalog dalam melayani trafik simultan.
 
-### 6.3. Justifikasi & Observabilitas
-- **Validasi Arsitektur:** Hasil pengujian ini membuktikan efektivitas arsitektur yang dibangun, termasuk pembatasan sumber daya memori (*resource limits* 384MB pada konfigurasi Docker) yang tetap mampu memberikan respons optimal. Pengujian ini juga memvalidasi efisiensi *query* pada sistem pencarian dan kategori.
-- **Monitoring (Skala 4):** Selama beban tinggi berlangsung, metrik trafik sistem (*throughput*, *latency*, dan *error rate*) terekam dan diobservasi secara langsung melalui *endpoint* Spring Boot Actuator (`/actuator/prometheus`), memenuhi kriteria observabilitas untuk diintegrasikan lebih lanjut ke *dashboard* pemantauan.
+### 6.4. Justifikasi & Observabilitas
+- **Validasi Arsitektur:** Hasil pengujian ini membuktikan efektivitas arsitektur yang dibangun, termasuk pembatasan sumber daya memori (*resource limits* 384MB pada konfigurasi Docker) yang tetap mampu memberikan respons optimal. 
+- **Monitoring (Skala 4):** Selama beban tinggi berlangsung, metrik trafik sistem (*throughput*, *latency*, dan *error rate*) terekam dan diobservasi secara langsung melalui *endpoint* Spring Boot Actuator (`/actuator/prometheus`).
+
+## 7. Verifikasi Operasional Lanjutan (Skala 4)
+
+### 7.1. Uji Coba Prosedur Rollback & Disaster Recovery
+Untuk menjamin reliabilitas layanan, telah dilakukan simulasi kegagalan pada lingkungan AWS EC2:
+1. **Skenario:** Melakukan *deployment* versi aplikasi yang rusak (sengaja dibuat gagal *startup*).
+2. **Eksekusi:** Menjalankan `scripts/rollback.sh`.
+3. **Hasil:** Sistem berhasil melakukan pencadangan log otomatis, menghentikan kontainer yang rusak, dan melakukan *re-deploy* ke versi stabil terakhir dalam waktu kurang dari **15 detik**.
+4. **Status:** **TERVERIFIKASI**.
+
+### 7.2. Strategi Deployment: Rolling Update (Justifikasi)
+Layanan ini menggunakan strategi **Rolling Update** via Docker Compose. 
+- **Justifikasi:** Dipilih karena memberikan keseimbangan optimal antara efisiensi sumber daya pada *instance* EC2 yang terbatas (t3.small) dan ketersediaan layanan (*zero downtime* selama transisi kontainer), dibandingkan strategi Blue/Green yang membutuhkan dua kali lipat kapasitas memori.
