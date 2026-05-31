@@ -14,7 +14,42 @@
             <div class="flex-shrink-0 flex items-center">
                 <span class="text-2xl font-bold text-blue-600 tracking-tight">BidMart</span>
             </div>
-            <div class="hidden sm:flex space-x-4">
+            <div class="hidden sm:flex space-x-4 items-center">
+                <!-- Role Switcher -->
+                <div class="flex bg-gray-100 rounded-lg p-1 mr-2">
+                    <button onclick="setRole('BUYER')" id="buyerBtn" class="px-3 py-1 rounded-md text-xs font-bold transition-all">BUYER</button>
+                    <button onclick="setRole('SELLER')" id="sellerBtn" class="px-3 py-1 rounded-md text-xs font-bold transition-all">SELLER</button>
+                </div>
+
+                <script>
+                    function setRole(role) {
+                        localStorage.setItem('userRole', role);
+                        updateRoleUI();
+                        // Optional: reload or notify other components
+                        window.location.reload(); 
+                    }
+                    function updateRoleUI() {
+                        const role = localStorage.getItem('userRole') || 'BUYER';
+                        const buyerBtn = document.getElementById('buyerBtn');
+                        const sellerBtn = document.getElementById('sellerBtn');
+                        
+                        if (role === 'BUYER') {
+                            buyerBtn.className = 'px-3 py-1 rounded-md text-xs font-bold bg-white shadow-sm text-blue-600';
+                            sellerBtn.className = 'px-3 py-1 rounded-md text-xs font-bold text-gray-500 hover:text-gray-700';
+                        } else {
+                            sellerBtn.className = 'px-3 py-1 rounded-md text-xs font-bold bg-white shadow-sm text-blue-600';
+                            buyerBtn.className = 'px-3 py-1 rounded-md text-xs font-bold text-gray-500 hover:text-gray-700';
+                        }
+
+                        // Hide/Show create button based on role
+                        const createBtn = document.getElementById('createListingBtn');
+                        if (createBtn) {
+                            createBtn.style.display = (role === 'SELLER') ? 'flex' : 'none';
+                        }
+                    }
+                    document.addEventListener('DOMContentLoaded', updateRoleUI);
+                </script>
+
                 <form th:action="@{/listings}" method="get" class="flex space-x-2">
                     <div class="relative">
                         <input type="text" name="title" th:value="${param.title}" placeholder="Cari barang lelang..."
@@ -22,15 +57,22 @@
                     </div>
                     <select name="categoryId" class="border border-gray-300 rounded-lg text-sm px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                         <option value="">Semua Kategori</option>
-                        <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}"
-                                th:selected="${param.categoryId != null and param.categoryId[0] == cat.id.toString()}"></option>
+                        <th:block th:each="cat : ${categories}">
+                            <!-- Parent Category -->
+                            <option th:value="${cat.id}" th:text="${cat.name}"
+                                    th:selected="${selectedCategoryId == cat.id}"></option>
+                            <!-- Sub Categories -->
+                            <option th:each="sub : ${cat.subCategories}" 
+                                    th:value="${sub.id}" th:text="${'-- ' + sub.name}"
+                                    th:selected="${selectedCategoryId == sub.id}"></option>
+                        </th:block>
                     </select>
                     <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                         Cari
                     </button>
                 </form>
 
-                <a th:href="@{/listings/create}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors ml-4 flex items-center">
+                <a id="createListingBtn" th:href="@{/listings/create}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors ml-4 flex items-center">
                     + Buat Listing
                 </a>
             </div>

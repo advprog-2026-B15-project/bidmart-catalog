@@ -106,17 +106,10 @@ public class ListingServiceImpl implements ListingService {
             ListingStatus status,
             Pageable pageable) {
 
-        org.springframework.util.StopWatch sw = new org.springframework.util.StopWatch();
-        sw.start("ListingSearch");
-
         Specification<Listing> spec =
                 ListingSpecification.filterListings(title, categoryIds, minPrice, maxPrice, status);
-        Page<Listing> result = listingRepository.findAll(spec, pageable);
-
-        sw.stop();
-        log.info("[PROFILING] Search took: {} ms", sw.getTotalTimeMillis());
-
-        return result;
+        
+        return listingRepository.findAll(spec, pageable);
     }
 
     @Override

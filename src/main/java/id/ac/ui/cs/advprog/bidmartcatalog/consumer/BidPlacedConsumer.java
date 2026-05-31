@@ -58,6 +58,7 @@ public class BidPlacedConsumer {
             return;
         }
 
+
         BidPlacedEvent.Payload payload = event.getPayload();
         if (payload == null || payload.getListingId() == null || payload.getBidAmount() == null) {
             log.error("[BidPlaced] Invalid payload for eventId={}, sending to DLQ.", eventId);
