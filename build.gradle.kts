@@ -11,8 +11,16 @@ plugins {
     id("org.springframework.boot") version "3.5.11"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.sonarqube") version "4.4.1.3373"
-    id("org.owasp.dependencycheck") version "9.0.7"
+    id("org.owasp.dependencycheck") version "12.1.0"
     kotlin("jvm")
+}
+
+dependencyCheck {
+    nvd {
+        apiKey = System.getenv("NVD_API_KEY")
+        delay = 16000 // Increase delay to help avoid rate limits without key
+    }
+    failBuildOnCVSS = 7.0f // Optional: fail build on high vulnerabilities
 }
 
 group = "id.ac.ui.cs.advprog"
