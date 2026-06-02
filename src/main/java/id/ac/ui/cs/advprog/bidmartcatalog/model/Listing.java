@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -48,6 +49,7 @@ public class Listing {
     // Relasi ke Category
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Category category;
 
     // Relasi ke ListingImage
