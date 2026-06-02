@@ -2,7 +2,7 @@ name: CI/CD - bidmartcatalog
 
 on:
   push:
-    branches: [ main, staging, milestone100 ]
+    branches: [ main ]
 
 jobs:
   test-and-quality:
@@ -35,6 +35,8 @@ jobs:
 
       - name: Run Dependency Check
         run: ./gradlew dependencyCheckAnalyze --no-daemon
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         continue-on-error: true
 
       # Enforce Coverage (90%)
@@ -69,7 +71,7 @@ jobs:
     name: Deploy to EC2
     needs: test-and-quality
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/milestone100' || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Deploy via SSH
@@ -85,6 +87,6 @@ jobs:
             ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
             
             cd ~/bidmart-catalog
-            git pull origin milestone100
+            git pull origin main
             docker compose up -d --build
             docker image prune -f
