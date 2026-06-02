@@ -1,13 +1,15 @@
-# Build stage
-FROM gradle:8-jdk21 AS build
-COPY --chown=gradle:gradle . /home/gradle/src
-WORKDIR /home/gradle/src
-RUN gradle bootJar --no-daemon -x test -x check
-
-# Run stage
+# Gunakan JRE yang ringan untuk menjalankan aplikasi
 FROM eclipse-temurin:21-jre-alpine
+
 WORKDIR /app
-COPY --from=build /home/gradle/src/build/libs/*.jar app.jar
-RUN mkdir uploads
+
+# Ambil file JAR yang sudah dibangun oleh GitHub Actions
+# File JAR harus diletakkan di folder yang sama dengan Dockerfile sebelum build
+COPY build/libs/*.jar app.jar
+
+# Buat folder uploads jika belum ada
+RUN mkdir -p uploads
+
 EXPOSE 8082
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

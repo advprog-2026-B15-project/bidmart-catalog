@@ -5,8 +5,8 @@ on:
     branches: [ main ]
 
 jobs:
-  test-and-quality:
-    name: Test and Quality Check
+  build-and-test:
+    name: Build, Test and Quality Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -22,9 +22,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Run Tests first
+      # Build executable JAR (Heavy lifting done by GitHub)
+      - name: Build with Gradle
+        run: ./gradlew bootJar -Dspring.profiles.active=test --no-daemon
+
+      # Run Tests
       - name: Run tests with coverage
-        run: ./gradlew test jacocoTestReport -Dspring.profiles.active=test --no-daemon
+        run: ./gradlew test jacocoTestReport --no-daemon
 
       # Run Quality Tools
       - name: Run PMD
@@ -32,23 +36,6 @@ jobs:
 
       - name: Run Checkstyle
         run: ./gradlew checkstyleMain checkstyleTest --no-daemon
-
-      # Caching Dependency Check data to speed up subsequent runs
-      # - name: Cache Dependency Check data
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       ~/.gradle/dependency-check-data
-      #       ./build/dependency-check-data
-      #     key: ${{ runner.os }}-dependency-check-${{ github.run_id }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-dependency-check-
-
-      # - name: Run Dependency Check
-      #   run: ./gradlew dependencyCheckAnalyze --no-daemon
-      #   env:
-      #     NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-      #   continue-on-error: true
 
       # Enforce Coverage (90%)
       - name: Check minimum coverage threshold
@@ -78,13 +65,29 @@ jobs:
             exit 1
           fi
 
+      # Simpan artifact JAR untuk deployment
+      - name: Upload JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: build/libs/*.jar
+
   deploy:
     name: Deploy to EC2
-    needs: test-and-quality
+    needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download JAR Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: build/libs
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -93,11 +96,26 @@ jobs:
           key:   ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 30m
           script: |
-            # Update known hosts
-            mkdir -p ~/.ssh
-            ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+            mkdir -p ~/bidmart-catalog/build/libs
             
+      - name: Copy JAR to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "build/libs/*.jar,Dockerfile,docker-compose.yml"
+          target: "~/bidmart-catalog"
+          strip_components: 0
+
+      - name: Restart Containers
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key:   ${{ secrets.EC2_SSH_KEY }}
+          script: |
             cd ~/bidmart-catalog
-            git pull origin main
+            docker compose down
             docker compose up -d --build
             docker image prune -f
