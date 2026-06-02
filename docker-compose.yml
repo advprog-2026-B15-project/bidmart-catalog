@@ -22,25 +22,6 @@ services:
       timeout: 5s
       retries: 5
 
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    restart: always
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     build: .
     restart: on-failure
@@ -51,18 +32,19 @@ services:
       - DB_URL=jdbc:postgresql://db:5432/bidmart_catalog
       - DB_USERNAME=postgres
       - MY_SECRET_DB_PASS=${MY_SECRET_DB_PASS:-postgres}
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=guest
-      - SPRING_RABBITMQ_PASSWORD=guest
+      # Konfigurasi RabbitMQ (CloudAMQP Eksternal)
+      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST}
+      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - SPRING_RABBITMQ_VHOST=${RABBITMQ_VHOST}
+      - SPRING_RABBITMQ_SSL_ENABLED=${RABBITMQ_SSL_ENABLED:-true}
     deploy:
       resources:
         limits:
           memory: 384M
     depends_on:
       db:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
     volumes:
       - ./uploads:/app/uploads

@@ -11,6 +11,7 @@ import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
+import java.lang.reflect.Constructor;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +20,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ListingSpecificationTest {
+
+    @Test
+    @DisplayName("Test private constructor for coverage")
+    void testPrivateConstructor() throws Exception {
+        Constructor<ListingSpecification> constructor = ListingSpecification.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        ListingSpecification instance = constructor.newInstance();
+        assertNotNull(instance);
+    }
 
     @Test
     @DisplayName("Test filterListings specification logic")
