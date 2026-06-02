@@ -218,7 +218,8 @@ public class ListingApiController {
         }
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
-                title, categoryIds, minPrice, maxPrice, filterStatus, PageRequest.of(page, size));
+                title, categoryIds, minPrice, maxPrice, filterStatus, 
+                PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending()));
 
         Page<ListingResponseDTO> dtoPage = searchResults.map(this::convertToDTO);
 
@@ -300,7 +301,7 @@ public class ListingApiController {
 
     @Operation(summary = "Validasi Internal Lelang", description = "Mengecek apakah listing valid untuk menerima penawaran baru (digunakan oleh Modul Auction)")
     @GetMapping("/{id}/validate")
-    public ResponseEntity<Map<String, Object>> validateListingForBid(@PathVariable UUID id) {
+    public ResponseEntity<?> validateListingForBid(@PathVariable UUID id) {
         try {
             Listing listing = listingService.getListingById(id);
             Map<String, Object> response = new HashMap<>();
