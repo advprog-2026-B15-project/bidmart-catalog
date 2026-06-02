@@ -6,6 +6,8 @@ import id.ac.ui.cs.advprog.bidmartcatalog.model.Category;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
 import id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingRequestDTO;
+import id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,6 +47,26 @@ public class ListingApiController {
     public ListingApiController(ListingService listingService, CategoryService categoryService) {
         this.listingService = listingService;
         this.categoryService = categoryService;
+    }
+
+    private ListingResponseDTO convertToDTO(Listing listing) {
+        return ListingResponseDTO.builder()
+                .id(listing.getId())
+                .title(listing.getTitle())
+                .description(listing.getDescription())
+                .categoryId(listing.getCategory() != null ? listing.getCategory().getId() : null)
+                .categoryName(listing.getCategory() != null ? listing.getCategory().getName() : null)
+                .imageUrls(listing.getImages().stream().map(ListingImage::getImageUrl).collect(Collectors.toList()))
+                .sellerId(listing.getSellerId())
+                .startingPrice(listing.getStartingPrice())
+                .currentPrice(listing.getCurrentPrice())
+                .reservePrice(listing.getReservePrice())
+                .endTime(listing.getEndTime())
+                .status(listing.getStatus())
+                .bidCount(listing.getBidCount())
+                .createdAt(listing.getCreatedAt())
+                .updatedAt(listing.getUpdatedAt())
+                .build();
     }
 
     /**
@@ -77,7 +100,7 @@ public class ListingApiController {
             }
 
             Listing createdListing = listingService.createListing(listing, files);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdListing);
+            return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(createdListing));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -88,10 +111,10 @@ public class ListingApiController {
      * Method: GET /api/listings/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Listing> getListingById(@PathVariable UUID id) {
+    public ResponseEntity<ListingResponseDTO> getListingById(@PathVariable UUID id) {
         try {
             Listing listing = listingService.getListingById(id);
-            return ResponseEntity.ok(listing); // Mengembalikan JSON data listing
+            return ResponseEntity.ok(convertToDTO(listing)); 
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build(); // Mengembalikan 404 jika tidak ketemu
         }
@@ -112,7 +135,7 @@ public class ListingApiController {
             }
 
             Listing updatedListing = listingService.updateCurrentPrice(id, newPrice);
-            return ResponseEntity.ok(updatedListing);
+            return ResponseEntity.ok(convertToDTO(updatedListing));
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage()); // Mengembalikan 400 jika harga tidak valid
@@ -138,7 +161,7 @@ public class ListingApiController {
             }
             
             Listing publishedListing = listingService.publishListing(id);
-            return ResponseEntity.ok(publishedListing);
+            return ResponseEntity.ok(convertToDTO(publishedListing));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -150,7 +173,7 @@ public class ListingApiController {
      */
     @Operation(summary = "Cari Katalog Lelang", description = "Mengambil daftar barang lelang dengan filter pencarian dan hierarki kategori")
     @GetMapping
-    public ResponseEntity<Page<Listing>> getAllListings(
+    public ResponseEntity<Page<ListingResponseDTO>> getAllListings(
             @RequestParam(required = false) String title,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) Double minPrice,
@@ -178,7 +201,9 @@ public class ListingApiController {
         Page<Listing> searchResults = listingService.searchAndFilterListings(
                 title, categoryIds, minPrice, maxPrice, filterStatus, PageRequest.of(page, size));
 
-        return ResponseEntity.ok(searchResults);
+        Page<ListingResponseDTO> dtoPage = searchResults.map(this::convertToDTO);
+
+        return ResponseEntity.ok(dtoPage);
     }
 
     /**
@@ -209,7 +234,7 @@ public class ListingApiController {
             }
 
             Listing updatedListing = listingService.updateListing(id, listingUpdates);
-            return ResponseEntity.ok(updatedListing);
+            return ResponseEntity.ok(convertToDTO(updatedListing));
         } catch (IllegalStateException e) {
             // Mengembalikan 403 Forbidden jika sudah ada bid / lelang tutup
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
