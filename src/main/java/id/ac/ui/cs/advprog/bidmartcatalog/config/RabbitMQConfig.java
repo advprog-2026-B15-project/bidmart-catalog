@@ -30,16 +30,19 @@ public class RabbitMQConfig {
     public static final String RK_BID_PLACED      = "auction.event.bid-placed";
     public static final String RK_AUCTION_CLOSED  = "auction.event.auction-closed";
     public static final String RK_LISTING_PUBLISHED = "auction.event.listing-published";
+    public static final String RK_WINNER_DETERMINED = "auction.event.winner-determined";
 
     // ── Queue Names ───────────────────────────────────────────────────────────
 
     public static final String QUEUE_BID_PLACED     = "catalog.bid-placed";
     public static final String QUEUE_AUCTION_CLOSED = "catalog.auction-closed";
+    public static final String QUEUE_WINNER_DETERMINED = "catalog.winner-determined";
 
     // ── DLQ Names ─────────────────────────────────────────────────────────────
 
     public static final String DLQ_BID_PLACED     = "catalog.bid-placed.dlq";
     public static final String DLQ_AUCTION_CLOSED = "catalog.auction-closed.dlq";
+    public static final String DLQ_WINNER_DETERMINED = "catalog.winner-determined.dlq";
     public static final String DLX_NAME           = "auction.events.dlx";
 
     // ── Beans: Exchange ───────────────────────────────────────────────────────
@@ -73,6 +76,14 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    Queue winnerDeterminedQueue() {
+        return QueueBuilder.durable(QUEUE_WINNER_DETERMINED)
+                .withArgument("x-dead-letter-exchange", DLX_NAME)
+                .withArgument("x-dead-letter-routing-key", DLQ_WINNER_DETERMINED)
+                .build();
+    }
+
+    @Bean
     Queue bidPlacedDlq() {
         return QueueBuilder.durable(DLQ_BID_PLACED).build();
     }
@@ -80,6 +91,11 @@ public class RabbitMQConfig {
     @Bean
     Queue auctionClosedDlq() {
         return QueueBuilder.durable(DLQ_AUCTION_CLOSED).build();
+    }
+
+    @Bean
+    Queue winnerDeterminedDlq() {
+        return QueueBuilder.durable(DLQ_WINNER_DETERMINED).build();
     }
 
     // ── Beans: Bindings ───────────────────────────────────────────────────────
@@ -99,6 +115,13 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    Binding winnerDeterminedBinding() {
+        return BindingBuilder.bind(winnerDeterminedQueue())
+                .to(auctionEventsExchange())
+                .with(RK_WINNER_DETERMINED);
+    }
+
+    @Bean
     Binding bidPlacedDlqBinding() {
         return BindingBuilder.bind(bidPlacedDlq())
                 .to(deadLetterExchange())
@@ -110,6 +133,13 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(auctionClosedDlq())
                 .to(deadLetterExchange())
                 .with(DLQ_AUCTION_CLOSED);
+    }
+
+    @Bean
+    Binding winnerDeterminedDlqBinding() {
+        return BindingBuilder.bind(winnerDeterminedDlq())
+                .to(deadLetterExchange())
+                .with(DLQ_WINNER_DETERMINED);
     }
 
     // ── Beans: Converter & Template ───────────────────────────────────────────
