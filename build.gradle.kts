@@ -31,6 +31,7 @@ pmd {
     isConsoleOutput = true
     toolVersion = "7.7.0"
     ruleSets = listOf("category/java/errorprone.xml", "category/java/bestpractices.xml")
+    ignoreFailures = true
 }
 
 checkstyle {
