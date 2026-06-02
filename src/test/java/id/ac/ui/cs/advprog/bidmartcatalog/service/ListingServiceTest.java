@@ -31,6 +31,7 @@ class ListingServiceTest {
 
     @Mock ListingRepository listingRepository;
     @Mock StorageService storageService;
+    @Mock id.ac.ui.cs.advprog.bidmartcatalog.producer.CatalogEventProducer eventProducer;
     @InjectMocks ListingServiceImpl listingService;
 
     private Listing activeListing;
@@ -178,6 +179,7 @@ class ListingServiceTest {
             Listing result = listingService.publishListing(listingId);
 
             assertThat(result.getStatus()).isEqualTo(ListingStatus.ACTIVE);
+            verify(eventProducer).sendListingPublished(any(Listing.class));
         }
 
         @Test
@@ -189,6 +191,7 @@ class ListingServiceTest {
 
             assertThat(result.getStatus()).isEqualTo(ListingStatus.ACTIVE);
             verify(listingRepository, never()).save(any());
+            verify(eventProducer, never()).sendListingPublished(any());
         }
     }
 

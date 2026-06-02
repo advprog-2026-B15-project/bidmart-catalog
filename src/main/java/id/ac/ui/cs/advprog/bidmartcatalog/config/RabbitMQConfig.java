@@ -29,6 +29,7 @@ public class RabbitMQConfig {
 
     public static final String RK_BID_PLACED      = "auction.event.bid-placed";
     public static final String RK_AUCTION_CLOSED  = "auction.event.auction-closed";
+    public static final String RK_LISTING_PUBLISHED = "auction.event.listing-published";
 
     // ── Queue Names ───────────────────────────────────────────────────────────
 
