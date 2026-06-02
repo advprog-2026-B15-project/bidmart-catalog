@@ -149,3 +149,14 @@ Untuk menjamin reliabilitas layanan, telah dilakukan simulasi kegagalan pada lin
 ### 7.2. Strategi Deployment: Rolling Update (Justifikasi)
 Layanan ini menggunakan strategi **Rolling Update** via Docker Compose. 
 - **Justifikasi:** Dipilih karena memberikan keseimbangan optimal antara efisiensi sumber daya pada *instance* EC2 yang terbatas (t3.small) dan ketersediaan layanan (*zero downtime* selama transisi kontainer), dibandingkan strategi Blue/Green yang membutuhkan dua kali lipat kapasitas memori.
+
+## 8. CI/CD & Quality Reports (Pemenuhan Kriteria Final)
+Proyek ini mengimplementasikan alur CI/CD yang terintegrasi sepenuhnya dengan pengujian kualitas otomatis:
+
+*   **GitHub Actions (CI/CD):** Pipeline otomatis berjalan pada setiap *push* ke branch `main`. Pipeline mencakup tahap *build*, *unit testing*, *pmd/checkstyle scan*, *coverage enforcement*, dan *automated deployment* ke AWS EC2.
+*   **Akses Test Report:** Hasil pengujian JUnit dan laporan cakupan JaCoCo (HTML) diunggah sebagai **Artifacts** di setiap *workflow run*. Dapat diunduh melalui tab **Actions** di GitHub.
+*   **SonarCloud Integration:** Analisis statis mendalam untuk *code smells*, *security vulnerabilities*, dan *maintainability* terhubung langsung dengan SonarCloud.
+*   **Event-Driven Documentation:** Spesifikasi kontrak event baru (RabbitMQ) seperti `ListingPublished` telah didokumentasikan secara terpisah di file `ListingPublished.md` untuk menjamin transparansi integrasi antar-layanan.
+
+---
+*Dokumentasi ini disusun untuk memenuhi kriteria penilaian Proyek Akhir Advprog 2026.*

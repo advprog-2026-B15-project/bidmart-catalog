@@ -65,6 +65,28 @@ jobs:
             exit 1
           fi
 
+      # Upload Test Reports (JUnit & Jacoco)
+      - name: Upload JUnit Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: build/reports/tests/test/
+
+      - name: Upload Jacoco Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: build/reports/jacoco/test/html/
+
+      # SonarCloud Scan
+      - name: SonarCloud Scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonar --no-daemon
+
       # Simpan artifact JAR untuk deployment
       - name: Upload JAR Artifact
         uses: actions/upload-artifact@v4
