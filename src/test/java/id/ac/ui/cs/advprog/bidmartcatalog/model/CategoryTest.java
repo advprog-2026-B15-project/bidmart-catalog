@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -37,9 +38,11 @@ class CategoryTest {
                 .parentCategory(category)
                 .build();
 
-        assertEquals("Smartphones", subCategory.getName());
-        assertEquals(category, subCategory.getParentCategory());
-        assertNotNull(subCategory.getId());
+        assertAll("Category builder properties",
+            () -> assertEquals("Smartphones", subCategory.getName(), "Category name should match"),
+            () -> assertEquals(category, subCategory.getParentCategory(), "Parent category should match"),
+            () -> assertNotNull(subCategory.getId(), "Category ID should not be null")
+        );
     }
 
     @Test
@@ -47,7 +50,7 @@ class CategoryTest {
     void testGetAndSetName() {
         String newName = "Home Appliances";
         category.setName(newName);
-        assertEquals(newName, category.getName());
+        assertEquals(newName, category.getName(), "Category name should match updated value");
     }
 
     @Test
@@ -61,24 +64,28 @@ class CategoryTest {
         subs.add(child);
         category.setSubCategories(subs);
 
-        assertNotNull(category.getSubCategories());
-        assertEquals(1, category.getSubCategories().size());
-        assertEquals(category, category.getSubCategories().get(0).getParentCategory());
+        assertAll("Category hierarchy properties",
+            () -> assertNotNull(category.getSubCategories(), "Subcategories list should not be null"),
+            () -> assertEquals(1, category.getSubCategories().size(), "Subcategories list size should be 1"),
+            () -> assertEquals(category, category.getSubCategories().get(0).getParentCategory(), "Child parent should match")
+        );
     }
 
     @Test
     @DisplayName("Test NoArgsConstructor and AllArgsConstructor")
     void testConstructors() {
         Category emptyCategory = new Category();
-        assertNull(emptyCategory.getName());
 
         List<Category> subs = new ArrayList<>();
         UUID randomId = UUID.randomUUID();
         Category fullCategory = new Category(randomId, "Books", null, subs);
 
-        assertEquals(randomId, fullCategory.getId());
-        assertEquals("Books", fullCategory.getName());
-        assertEquals(subs, fullCategory.getSubCategories());
+        assertAll("Constructor properties",
+            () -> assertNull(emptyCategory.getName(), "Name should be null for no-args constructor"),
+            () -> assertEquals(randomId, fullCategory.getId(), "ID should match"),
+            () -> assertEquals("Books", fullCategory.getName(), "Name should match"),
+            () -> assertEquals(subs, fullCategory.getSubCategories(), "Subcategories should match")
+        );
     }
 
     @Test
@@ -88,7 +95,9 @@ class CategoryTest {
         Category sub = new Category();
         parent.addSubCategory(sub);
 
-        assertTrue(parent.getSubCategories().contains(sub));
-        assertEquals(parent, sub.getParentCategory());
+        assertAll("addSubCategory properties",
+            () -> assertTrue(parent.getSubCategories().contains(sub), "Parent should contain the subcategory"),
+            () -> assertEquals(parent, sub.getParentCategory(), "Subcategory parent should match")
+        );
     }
-    }
+}

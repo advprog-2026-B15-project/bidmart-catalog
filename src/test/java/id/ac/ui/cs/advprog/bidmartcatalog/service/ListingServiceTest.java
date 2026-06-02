@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.eq;
@@ -34,6 +35,7 @@ class ListingServiceTest {
     @Mock id.ac.ui.cs.advprog.bidmartcatalog.producer.CatalogEventProducer eventProducer;
     @InjectMocks ListingServiceImpl listingService;
 
+    private static final String NEW_TITLE = "New Title";
     private Listing activeListing;
     private UUID listingId;
 
@@ -64,8 +66,10 @@ class ListingServiceTest {
 
             Listing result = listingService.updateCurrentPrice(listingId, 1_600_000.0);
 
-            assertThat(result.getCurrentPrice()).isEqualTo(1_600_000.0);
-            assertThat(result.getBidCount()).isEqualTo(1);
+            assertAll("Update current price properties",
+                () -> assertThat(result.getCurrentPrice()).as("Current price should be updated").isEqualTo(1_600_000.0),
+                () -> assertThat(result.getBidCount()).as("Bid count should be incremented").isEqualTo(1)
+            );
         }
 
         @Test
@@ -105,10 +109,15 @@ class ListingServiceTest {
 
             Listing result = listingService.closeListing(listingId);
 
-            assertThat(result.getStatus()).isEqualTo(ListingStatus.CLOSED);
             ArgumentCaptor<Listing> captor = ArgumentCaptor.forClass(Listing.class);
-            verify(listingRepository).save(captor.capture());
-            assertThat(captor.getValue().getStatus()).isEqualTo(ListingStatus.CLOSED);
+            
+            assertAll("Close listing status and verification",
+                () -> {
+                    verify(listingRepository).save(captor.capture());
+                    assertThat(captor.getValue().getStatus()).as("Saved listing status should be CLOSED").isEqualTo(ListingStatus.CLOSED);
+                },
+                () -> assertThat(result.getStatus()).as("Result status should be CLOSED").isEqualTo(ListingStatus.CLOSED)
+            );
         }
 
         @Test
@@ -119,8 +128,10 @@ class ListingServiceTest {
 
             Listing result = listingService.closeListing(listingId);
 
-            assertThat(result.getStatus()).isEqualTo(ListingStatus.CLOSED);
-            verify(listingRepository, never()).save(any());
+            assertAll("Idempotent close properties",
+                () -> assertThat(result.getStatus()).as("Status should remain CLOSED").isEqualTo(ListingStatus.CLOSED),
+                () -> verify(listingRepository, never()).save(any())
+            );
         }
 
         @Test
@@ -146,7 +157,7 @@ class ListingServiceTest {
             activeListing.setBidCount(3);
             when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
 
-            Listing update = Listing.builder().title("New Title").build();
+            Listing update = Listing.builder().title(NEW_TITLE).build();
             assertThatThrownBy(() -> listingService.updateListing(listingId, update))
                     .isInstanceOf(IllegalStateException.class);
         }
@@ -157,7 +168,7 @@ class ListingServiceTest {
             activeListing.setStatus(ListingStatus.CLOSED);
             when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
 
-            Listing update = Listing.builder().title("New Title").build();
+            Listing update = Listing.builder().title(NEW_TITLE).build();
             assertThatThrownBy(() -> listingService.updateListing(listingId, update))
                     .isInstanceOf(IllegalStateException.class);
         }
@@ -178,8 +189,10 @@ class ListingServiceTest {
 
             Listing result = listingService.publishListing(listingId);
 
-            assertThat(result.getStatus()).isEqualTo(ListingStatus.ACTIVE);
-            verify(eventProducer).sendListingPublished(any(Listing.class));
+            assertAll("Publish listing success",
+                () -> assertThat(result.getStatus()).as("Status should be ACTIVE").isEqualTo(ListingStatus.ACTIVE),
+                () -> verify(eventProducer).sendListingPublished(any(Listing.class))
+            );
         }
 
         @Test
@@ -189,9 +202,11 @@ class ListingServiceTest {
 
             Listing result = listingService.publishListing(listingId);
 
-            assertThat(result.getStatus()).isEqualTo(ListingStatus.ACTIVE);
-            verify(listingRepository, never()).save(any());
-            verify(eventProducer, never()).sendListingPublished(any());
+            assertAll("Already active no-op",
+                () -> assertThat(result.getStatus()).as("Status should remain ACTIVE").isEqualTo(ListingStatus.ACTIVE),
+                () -> verify(listingRepository, never()).save(any()),
+                () -> verify(eventProducer, never()).sendListingPublished(any())
+            );
         }
     }
 
@@ -211,10 +226,12 @@ class ListingServiceTest {
 
             java.util.Map<String, Object> stats = listingService.getSellerStatistics(sellerId);
 
-            assertThat(stats.get("totalListings")).isEqualTo(10L);
-            assertThat(stats.get("activeListings")).isEqualTo(5L);
-            assertThat(stats.get("closedListings")).isEqualTo(3L);
-            assertThat(stats.get("draftListings")).isEqualTo(2L);
+            assertAll("Seller statistics",
+                () -> assertThat(stats.get("totalListings")).as("Total listings should match").isEqualTo(10L),
+                () -> assertThat(stats.get("activeListings")).as("Active listings should match").isEqualTo(5L),
+                () -> assertThat(stats.get("closedListings")).as("Closed listings should match").isEqualTo(3L),
+                () -> assertThat(stats.get("draftListings")).as("Draft listings should match").isEqualTo(2L)
+            );
         }
     }
 
@@ -255,8 +272,10 @@ class ListingServiceTest {
 
             Listing result = listingService.createListing(newListing, null);
 
-            assertThat(result.getStatus()).isEqualTo(ListingStatus.DRAFT);
-            assertThat(result.getCurrentPrice()).isEqualTo(100.0);
+            assertAll("Create draft listing properties",
+                () -> assertThat(result.getStatus()).as("Status should be DRAFT").isEqualTo(ListingStatus.DRAFT),
+                () -> assertThat(result.getCurrentPrice()).as("Current price should match starting price").isEqualTo(100.0)
+            );
         }
 
         @Test
@@ -270,9 +289,11 @@ class ListingServiceTest {
 
             Listing result = listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file});
 
-            assertThat(result.getImages()).hasSize(1);
-            assertThat(result.getImages().get(0).isPrimary()).isTrue();
-            assertThat(result.getImages().get(0).getImageUrl()).isEqualTo("/uploads/test.jpg");
+            assertAll("Create listing with files properties",
+                () -> assertThat(result.getImages()).as("Images list size should be 1").hasSize(1),
+                () -> assertThat(result.getImages().get(0).isPrimary()).as("First image should be primary").isTrue(),
+                () -> assertThat(result.getImages().get(0).getImageUrl()).as("Image URL should match").isEqualTo("/uploads/test.jpg")
+            );
         }
 
         @Test
@@ -346,7 +367,7 @@ class ListingServiceTest {
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
             Listing update = Listing.builder()
-                    .title("New Title")
+                    .title(NEW_TITLE)
                     .description("New Desc")
                     .category(new id.ac.ui.cs.advprog.bidmartcatalog.model.Category())
                     .reservePrice(2_000_000.0)
@@ -354,9 +375,11 @@ class ListingServiceTest {
 
             Listing result = listingService.updateListing(listingId, update);
 
-            assertThat(result.getTitle()).isEqualTo("New Title");
-            assertThat(result.getDescription()).isEqualTo("New Desc");
-            assertThat(result.getReservePrice()).isEqualTo(2_000_000.0);
+            assertAll("Update data listing properties",
+                () -> assertThat(result.getTitle()).as("Title should be updated").isEqualTo(NEW_TITLE),
+                () -> assertThat(result.getDescription()).as("Description should be updated").isEqualTo("New Desc"),
+                () -> assertThat(result.getReservePrice()).as("Reserve price should be updated").isEqualTo(2_000_000.0)
+            );
         }
     }
 }

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,9 +40,11 @@ class CategoryRepositoryTest {
     void testSaveCategory() {
         Category savedCategory = categoryRepository.save(category);
 
-        assertNotNull(savedCategory);
-        assertNotNull(savedCategory.getId()); // Memastikan ID di-generate oleh database
-        assertEquals("Electronics", savedCategory.getName()); // Memastikan data tersimpan dengan benar
+        assertAll("Saved category properties",
+                () -> assertNotNull(savedCategory, "Saved category should not be null"),
+                () -> assertNotNull(savedCategory.getId(), "Saved category ID should be generated"),
+                () -> assertEquals("Electronics", savedCategory.getName(), "Saved category name should match input")
+        );
     }
 
     @Test
@@ -51,9 +54,11 @@ class CategoryRepositoryTest {
 
         Optional<Category> foundCategory = categoryRepository.findById(id);
 
-        assertTrue(foundCategory.isPresent());
-        assertEquals(savedCategory.getId(), foundCategory.get().getId());
-        assertEquals(savedCategory.getName(), foundCategory.get().getName());
+        assertAll("Found category properties",
+                () -> assertTrue(foundCategory.isPresent(), "Category should be found by ID"),
+                () -> assertEquals(savedCategory.getId(), foundCategory.get().getId(), "Found ID should match saved ID"),
+                () -> assertEquals(savedCategory.getName(), foundCategory.get().getName(), "Found name should match saved name")
+        );
     }
 
     @Test
@@ -69,8 +74,10 @@ class CategoryRepositoryTest {
         // Ambil semua kategori dari database in-memory
         List<Category> categoryList = categoryRepository.findAll();
 
-        assertNotNull(categoryList);
-        assertTrue(categoryList.size() >= 2);
+        assertAll("Find all categories properties",
+                () -> assertNotNull(categoryList, "Category list should not be null"),
+                () -> assertTrue(categoryList.size() >= 2, "Category list should contain at least 2 categories")
+        );
     }
 
     @Test
@@ -86,6 +93,6 @@ class CategoryRepositoryTest {
         Optional<Category> deletedCategory = categoryRepository.findById(id);
 
         // Pastikan datanya sudah tidak ada
-        assertTrue(deletedCategory.isEmpty());
+        assertTrue(deletedCategory.isEmpty(), "Deleted category should not be found by ID");
     }
 }

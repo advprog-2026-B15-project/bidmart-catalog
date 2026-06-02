@@ -13,6 +13,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.test.web.servlet.ResultActions;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -41,13 +44,16 @@ class CategoryApiControllerTest {
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(categories);
 
         // 3. Jalankan request dan verifikasi hasilnya
-        mockMvc.perform(get("/api/categories")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk()) // HTTP 200
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.length()").value(2)) // Jumlah elemen
-                .andExpect(jsonPath("$[0].name").value("Sepatu Bola"))
-                .andExpect(jsonPath("$[1].name").value("Jersey"));
+        ResultActions result = mockMvc.perform(get("/api/categories")
+                        .contentType(MediaType.APPLICATION_JSON));
+        
+        assertAll("Verify Categories API response",
+            () -> result.andExpect(status().isOk()),
+            () -> result.andExpect(content().contentType(MediaType.APPLICATION_JSON)),
+            () -> result.andExpect(jsonPath("$.length()").value(2)),
+            () -> result.andExpect(jsonPath("$[0].name").value("Sepatu Bola")),
+            () -> result.andExpect(jsonPath("$[1].name").value("Jersey"))
+        );
     }
 
 }

@@ -52,20 +52,26 @@ public class AuctionClosedConsumer {
 
         // ── Idempotency guard ─────────────────────────────────────────────────
         if (eventId == null || processedEventRepository.existsByEventId(eventId)) {
-            log.warn("[AuctionClosed] Duplicate or null eventId={}, skipping.", eventId);
+            if (log.isWarnEnabled()) {
+                log.warn("[AuctionClosed] Duplicate or null eventId={}, skipping.", eventId);
+            }
             channel.basicAck(deliveryTag, false);
             return;
         }
 
         AuctionClosedEvent.Payload payload = event.getPayload();
         if (payload == null || payload.getListingId() == null) {
-            log.error("[AuctionClosed] Invalid payload for eventId={}, sending to DLQ.", eventId);
+            if (log.isErrorEnabled()) {
+                log.error("[AuctionClosed] Invalid payload for eventId={}, sending to DLQ.", eventId);
+            }
             channel.basicNack(deliveryTag, false, false);
             return;
         }
 
-        log.info("[AuctionClosed] Processing eventId={} listingId={}",
-                eventId, payload.getListingId());
+        if (log.isInfoEnabled()) {
+            log.info("[AuctionClosed] Processing eventId={} listingId={}",
+                    eventId, payload.getListingId());
+        }
 
         try {
             // ── Close listing ─────────────────────────────────────────────────
@@ -78,14 +84,20 @@ public class AuctionClosedConsumer {
                     .build());
 
             channel.basicAck(deliveryTag, false);
-            log.info("[AuctionClosed] Successfully processed eventId={}", eventId);
+            if (log.isInfoEnabled()) {
+                log.info("[AuctionClosed] Successfully processed eventId={}", eventId);
+            }
 
         } catch (DataIntegrityViolationException ex) {
-            log.warn("[AuctionClosed] Race condition on eventId={}, treating as duplicate.", eventId);
+            if (log.isWarnEnabled()) {
+                log.warn("[AuctionClosed] Race condition on eventId={}, treating as duplicate.", eventId);
+            }
             channel.basicAck(deliveryTag, false);
 
         } catch (Exception ex) {
-            log.error("[AuctionClosed] Unexpected error processing eventId={}: {}", eventId, ex.getMessage(), ex);
+            if (log.isErrorEnabled()) {
+                log.error("[AuctionClosed] Unexpected error processing eventId={}: {}", eventId, ex.getMessage(), ex);
+            }
             channel.basicNack(deliveryTag, false, false);
         }
     }

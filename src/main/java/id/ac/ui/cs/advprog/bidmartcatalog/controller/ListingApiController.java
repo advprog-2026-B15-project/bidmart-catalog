@@ -36,10 +36,20 @@ import java.util.stream.Collectors;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @RequestMapping("/api/listings") // Prefix /api untuk membedakan dengan rute HTML
 @Tag(name = "Listing Catalog API", description = "Endpoints untuk mengelola dan mencari katalog lelang")
 public class ListingApiController {
+
+    private static final Logger log = LoggerFactory.getLogger(ListingApiController.class);
+
+    private static final String X_USER_ID = "X-User-Id";
+    private static final String X_USER_ROLE = "X-User-Role";
+    private static final String ROLE_SELLER = "SELLER";
+    private static final String ACCESS_DENIED_NOT_OWNER = "Akses ditolak: bukan pemilik listing.";
 
     private final ListingService listingService;
     private final CategoryService categoryService;
@@ -76,12 +86,12 @@ public class ListingApiController {
     @Operation(summary = "Buat Listing Baru", description = "Membuat listing lelang baru dengan status DRAFT (Mendukung Unggah Gambar)")
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<?> createListing(
-            @RequestHeader(value = "X-User-Id", required = true) String sellerId,
-            @RequestHeader(value = "X-User-Role", required = true) String role,
+            @RequestHeader(value = X_USER_ID, required = true) String sellerId,
+            @RequestHeader(value = X_USER_ROLE, required = true) String role,
             @ModelAttribute ListingRequestDTO request,
             @RequestParam(value = "imageFiles", required = false) org.springframework.web.multipart.MultipartFile[] files) {
 
-        if (!"SELLER".equalsIgnoreCase(role)) {
+        if (!ROLE_SELLER.equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat membuat listing.");
         }
 
@@ -140,7 +150,11 @@ public class ListingApiController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage()); // Mengembalikan 400 jika harga tidak valid
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            }
+            log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
@@ -152,18 +166,23 @@ public class ListingApiController {
     @PatchMapping("/{id}/publish")
     public ResponseEntity<?> publishListing(
             @PathVariable UUID id,
-            @RequestHeader(value = "X-User-Id", required = true) String sellerId) {
+            @RequestHeader(value = X_USER_ID, required = true) String sellerId) {
         
         try {
             Listing existingListing = listingService.getListingById(id);
             if (!existingListing.getSellerId().equals(sellerId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Akses ditolak: bukan pemilik listing.");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
             }
             
             Listing publishedListing = listingService.publishListing(id);
             return ResponseEntity.ok(convertToDTO(publishedListing));
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            }
+            log.error("Error publishing listing with id {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Gagal mempublikasikan listing (cek koneksi RabbitMQ): " + e.getMessage());
         }
     }
 
@@ -179,7 +198,7 @@ public class ListingApiController {
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) ListingStatus status,
-            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @RequestHeader(value = X_USER_ROLE, required = false) String role,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
@@ -187,7 +206,7 @@ public class ListingApiController {
         ListingStatus filterStatus = (status != null) ? status : ListingStatus.ACTIVE;
 
         // Security check: Hanya SELLER atau admin (internal) yang boleh melihat DRAFT
-        if (filterStatus != ListingStatus.ACTIVE && !"SELLER".equalsIgnoreCase(role)) {
+        if (filterStatus != ListingStatus.ACTIVE && !ROLE_SELLER.equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -212,18 +231,18 @@ public class ListingApiController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateListing(
             @PathVariable UUID id, 
-            @RequestHeader(value = "X-User-Id", required = true) String sellerId,
-            @RequestHeader(value = "X-User-Role", required = true) String role,
+            @RequestHeader(value = X_USER_ID, required = true) String sellerId,
+            @RequestHeader(value = X_USER_ROLE, required = true) String role,
             @RequestBody ListingRequestDTO updateData) {
         
-        if (!"SELLER".equalsIgnoreCase(role)) {
+        if (!ROLE_SELLER.equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat mengedit listing.");
         }
 
         try {
             Listing existingListing = listingService.getListingById(id);
             if (!existingListing.getSellerId().equals(sellerId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Akses ditolak: bukan pemilik listing.");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
             }
 
             Listing listingUpdates = new Listing();
@@ -239,7 +258,11 @@ public class ListingApiController {
             // Mengembalikan 403 Forbidden jika sudah ada bid / lelang tutup
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            }
+            log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
@@ -249,17 +272,17 @@ public class ListingApiController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteListing(
             @PathVariable UUID id,
-            @RequestHeader(value = "X-User-Id", required = true) String sellerId,
-            @RequestHeader(value = "X-User-Role", required = true) String role) {
+            @RequestHeader(value = X_USER_ID, required = true) String sellerId,
+            @RequestHeader(value = X_USER_ROLE, required = true) String role) {
         
-        if (!"SELLER".equalsIgnoreCase(role)) {
+        if (!ROLE_SELLER.equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat menghapus listing.");
         }
 
         try {
             Listing existingListing = listingService.getListingById(id);
             if (!existingListing.getSellerId().equals(sellerId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Akses ditolak: bukan pemilik listing.");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
             }
 
             listingService.deleteListing(id);
@@ -267,7 +290,11 @@ public class ListingApiController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            }
+            log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
@@ -296,7 +323,11 @@ public class ListingApiController {
             return ResponseEntity.ok(response);
 
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            }
+            log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 

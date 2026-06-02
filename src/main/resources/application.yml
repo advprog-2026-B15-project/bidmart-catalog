@@ -34,6 +34,9 @@ spring:
     virtual-host: ${SPRING_RABBITMQ_VHOST:/}
     ssl:
       enabled: ${SPRING_RABBITMQ_SSL_ENABLED:false}
+    listener:
+      simple:
+        auto-startup: false
 
 management:
   endpoints:

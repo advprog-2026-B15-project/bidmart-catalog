@@ -3,6 +3,7 @@ package id.ac.ui.cs.advprog.bidmartcatalog.model;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ListingStatusTest {
@@ -12,25 +13,31 @@ class ListingStatusTest {
     void testEnumValues() {
         ListingStatus[] statuses = ListingStatus.values();
 
-        assertEquals(3, statuses.length);
-        assertEquals(ListingStatus.DRAFT, statuses[0]);
-        assertEquals(ListingStatus.ACTIVE, statuses[1]);
-        assertEquals(ListingStatus.CLOSED, statuses[2]);
+        assertAll(
+                () -> assertEquals(3, statuses.length, "ListingStatus should have exactly 3 values"),
+                () -> assertEquals(ListingStatus.DRAFT, statuses[0], "First status should be DRAFT"),
+                () -> assertEquals(ListingStatus.ACTIVE, statuses[1], "Second status should be ACTIVE"),
+                () -> assertEquals(ListingStatus.CLOSED, statuses[2], "Third status should be CLOSED")
+        );
     }
 
     @Test
     @DisplayName("Test Enum ValueOf")
     void testEnumValueOf() {
-        assertEquals(ListingStatus.DRAFT, ListingStatus.valueOf("DRAFT"));
-        assertEquals(ListingStatus.ACTIVE, ListingStatus.valueOf("ACTIVE"));
-        assertEquals(ListingStatus.CLOSED, ListingStatus.valueOf("CLOSED"));
+        assertAll(
+                () -> assertEquals(ListingStatus.DRAFT, ListingStatus.valueOf("DRAFT"), "valueOf 'DRAFT' should return DRAFT"),
+                () -> assertEquals(ListingStatus.ACTIVE, ListingStatus.valueOf("ACTIVE"), "valueOf 'ACTIVE' should return ACTIVE"),
+                () -> assertEquals(ListingStatus.CLOSED, ListingStatus.valueOf("CLOSED"), "valueOf 'CLOSED' should return CLOSED")
+        );
     }
 
     @Test
     @DisplayName("Test Enum Name and Consistency")
     void testEnumName() {
-        assertEquals("DRAFT", ListingStatus.DRAFT.name());
-        assertEquals("ACTIVE", ListingStatus.ACTIVE.name());
-        assertEquals("CLOSED", ListingStatus.CLOSED.name());
+        assertAll(
+                () -> assertEquals("DRAFT", ListingStatus.DRAFT.name(), "name() of DRAFT should be 'DRAFT'"),
+                () -> assertEquals("ACTIVE", ListingStatus.ACTIVE.name(), "name() of ACTIVE should be 'ACTIVE'"),
+                () -> assertEquals("CLOSED", ListingStatus.CLOSED.name(), "name() of CLOSED should be 'CLOSED'")
+        );
     }
 }

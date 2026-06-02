@@ -42,20 +42,26 @@ public class WinnerDeterminedConsumer {
 
         // ── Idempotency guard ─────────────────────────────────────────────────
         if (eventId == null || processedEventRepository.existsByEventId(eventId)) {
-            log.warn("[WinnerDetermined] Duplicate or null eventId={}, skipping.", eventId);
+            if (log.isWarnEnabled()) {
+                log.warn("[WinnerDetermined] Duplicate or null eventId={}, skipping.", eventId);
+            }
             channel.basicAck(deliveryTag, false);
             return;
         }
 
         WinnerDeterminedEvent.Payload payload = event.getPayload();
         if (payload == null || payload.getListingId() == null) {
-            log.error("[WinnerDetermined] Invalid payload for eventId={}, sending to DLQ.", eventId);
+            if (log.isErrorEnabled()) {
+                log.error("[WinnerDetermined] Invalid payload for eventId={}, sending to DLQ.", eventId);
+            }
             channel.basicNack(deliveryTag, false, false);
             return;
         }
 
-        log.info("[WinnerDetermined] Processing eventId={} listingId={}",
-                eventId, payload.getListingId());
+        if (log.isInfoEnabled()) {
+            log.info("[WinnerDetermined] Processing eventId={} listingId={}",
+                    eventId, payload.getListingId());
+        }
 
         try {
             // ── Close listing (Mark as sold/closed) ───────────────────────────
@@ -68,14 +74,20 @@ public class WinnerDeterminedConsumer {
                     .build());
 
             channel.basicAck(deliveryTag, false);
-            log.info("[WinnerDetermined] Successfully processed eventId={}", eventId);
+            if (log.isInfoEnabled()) {
+                log.info("[WinnerDetermined] Successfully processed eventId={}", eventId);
+            }
 
         } catch (DataIntegrityViolationException ex) {
-            log.warn("[WinnerDetermined] Race condition on eventId={}, treating as duplicate.", eventId);
+            if (log.isWarnEnabled()) {
+                log.warn("[WinnerDetermined] Race condition on eventId={}, treating as duplicate.", eventId);
+            }
             channel.basicAck(deliveryTag, false);
 
         } catch (Exception ex) {
-            log.error("[WinnerDetermined] Unexpected error processing eventId={}: {}", eventId, ex.getMessage(), ex);
+            if (log.isErrorEnabled()) {
+                log.error("[WinnerDetermined] Unexpected error processing eventId={}: {}", eventId, ex.getMessage(), ex);
+            }
             channel.basicNack(deliveryTag, false, false);
         }
     }

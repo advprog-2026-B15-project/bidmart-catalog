@@ -19,6 +19,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -64,12 +66,16 @@ class BidPlacedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(listingService).updateCurrentPrice(LISTING_ID, BID_AMOUNT.doubleValue());
         ArgumentCaptor<ProcessedEvent> captor = ArgumentCaptor.forClass(ProcessedEvent.class);
-        verify(processedEventRepository).save(captor.capture());
-        assertThat(captor.getValue().getEventId()).isEqualTo(EVENT_ID);
-        verify(channel).basicAck(DELIVERY_TAG, false);
-        verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean());
+        assertAll("Verify update and ack",
+            () -> verify(listingService).updateCurrentPrice(LISTING_ID, BID_AMOUNT.doubleValue()),
+            () -> {
+                verify(processedEventRepository).save(captor.capture());
+                assertThat(captor.getValue().getEventId()).as("Event ID should match").isEqualTo(EVENT_ID);
+            },
+            () -> verify(channel).basicAck(DELIVERY_TAG, false),
+            () -> verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean())
+        );
     }
 
     @Test
@@ -79,8 +85,10 @@ class BidPlacedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(listingService, never()).updateCurrentPrice(any(), anyDouble());
-        verify(channel).basicAck(DELIVERY_TAG, false);
+        assertAll("Verify idempotency - skip and ack",
+            () -> verify(listingService, never()).updateCurrentPrice(any(), anyDouble()),
+            () -> verify(channel).basicAck(DELIVERY_TAG, false)
+        );
     }
 
     @Test
@@ -88,8 +96,10 @@ class BidPlacedConsumerTest {
     void handle_nullEventId_skipsAndAcks() throws IOException {
         consumer.handle(buildEvent(null), channel, DELIVERY_TAG);
 
-        verify(listingService, never()).updateCurrentPrice(any(), anyDouble());
-        verify(channel).basicAck(DELIVERY_TAG, false);
+        assertAll("Verify null event ID - skip and ack",
+            () -> verify(listingService, never()).updateCurrentPrice(any(), anyDouble()),
+            () -> verify(channel).basicAck(DELIVERY_TAG, false)
+        );
     }
 
     @Test
@@ -101,7 +111,9 @@ class BidPlacedConsumerTest {
 
         consumer.handle(event, channel, DELIVERY_TAG);
 
-        verify(channel).basicNack(DELIVERY_TAG, false, false);
+        assertAll("Verify invalid payload - nack",
+            () -> verify(channel).basicNack(DELIVERY_TAG, false, false)
+        );
     }
 
     @Test
@@ -113,8 +125,10 @@ class BidPlacedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(channel).basicNack(DELIVERY_TAG, false, false);
-        verify(processedEventRepository, never()).save(any());
+        assertAll("Verify out-of-order bid - nack",
+            () -> verify(channel).basicNack(DELIVERY_TAG, false, false),
+            () -> verify(processedEventRepository, never()).save(any())
+        );
     }
 
     @Test
@@ -126,6 +140,8 @@ class BidPlacedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(channel).basicNack(DELIVERY_TAG, false, false);
+        assertAll("Verify unexpected exception - nack",
+            () -> verify(channel).basicNack(DELIVERY_TAG, false, false)
+        );
     }
 }

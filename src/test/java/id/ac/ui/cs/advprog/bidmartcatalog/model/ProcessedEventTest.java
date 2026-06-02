@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -31,9 +32,11 @@ class ProcessedEventTest {
         Instant now = Instant.now();
         processedEvent.setProcessedAt(now);
 
-        assertEquals("evt-456", processedEvent.getEventId());
-        assertEquals("AuctionClosed", processedEvent.getEventType());
-        assertEquals(now, processedEvent.getProcessedAt());
+        assertAll("Getters should return values set by setters",
+                () -> assertEquals("evt-456", processedEvent.getEventId(), "Event ID should match"),
+                () -> assertEquals("AuctionClosed", processedEvent.getEventType(), "Event Type should match"),
+                () -> assertEquals(now, processedEvent.getProcessedAt(), "Processed At should match")
+        );
     }
 
     @Test
@@ -41,7 +44,7 @@ class ProcessedEventTest {
     void testPrePersist() {
         ProcessedEvent newEvent = new ProcessedEvent();
         newEvent.prePersist();
-        assertNotNull(newEvent.getProcessedAt());
+        assertNotNull(newEvent.getProcessedAt(), "PrePersist should set processedAt if it is null");
     }
 
     @Test
@@ -51,6 +54,6 @@ class ProcessedEventTest {
         ProcessedEvent newEvent = new ProcessedEvent();
         newEvent.setProcessedAt(existingDate);
         newEvent.prePersist();
-        assertEquals(existingDate, newEvent.getProcessedAt());
+        assertEquals(existingDate, newEvent.getProcessedAt(), "PrePersist should not overwrite existing processedAt");
     }
 }

@@ -41,17 +41,26 @@ public class ListingServiceImpl implements ListingService {
 
     @Override
     public Map<String, Object> getSellerStatistics(String sellerId) {
+        List<Object[]> results = listingRepository.countByStatusForSeller(sellerId);
         Map<String, Object> stats = new HashMap<>();
-        long totalListings = listingRepository.countBySellerId(sellerId);
-        long activeListings = listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.ACTIVE);
-        long closedListings = listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.CLOSED);
-        long draftListings = listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.DRAFT);
+        long total = 0;
 
-        stats.put("totalListings", totalListings);
-        stats.put("activeListings", activeListings);
-        stats.put("closedListings", closedListings);
-        stats.put("draftListings", draftListings);
+        // Initialize default values to 0
+        stats.put("activeListings", 0L);
+        stats.put("closedListings", 0L);
+        stats.put("draftListings", 0L);
 
+        for (Object[] result : results) {
+            ListingStatus status = (ListingStatus) result[0];
+            long count = (long) result[1];
+            total += count;
+
+            if (status == ListingStatus.ACTIVE) stats.put("activeListings", count);
+            else if (status == ListingStatus.CLOSED) stats.put("closedListings", count);
+            else if (status == ListingStatus.DRAFT) stats.put("draftListings", count);
+        }
+
+        stats.put("totalListings", total);
         return stats;
     }
 

@@ -47,10 +47,10 @@ class ListingImageTest {
                 .build();
 
         assertAll(
-                () -> assertEquals(newId, builtImage.getId()),
-                () -> assertEquals(newUrl, builtImage.getImageUrl()),
-                () -> assertFalse(builtImage.isPrimary()),
-                () -> assertEquals(mockListing, builtImage.getListing())
+                () -> assertEquals(newId, builtImage.getId(), "ListingImage ID should match the built value"),
+                () -> assertEquals(newUrl, builtImage.getImageUrl(), "ListingImage URL should match the built value"),
+                () -> assertFalse(builtImage.isPrimary(), "ListingImage primary flag should be false"),
+                () -> assertEquals(mockListing, builtImage.getListing(), "Listing relationship should be correctly assigned")
         );
     }
 
@@ -59,17 +59,22 @@ class ListingImageTest {
     void testGetAndSetImageUrl() {
         String updatedUrl = "https://example.com/images/updated-gear.png";
         listingImage.setImageUrl(updatedUrl);
-        assertEquals(updatedUrl, listingImage.getImageUrl());
+        assertEquals(updatedUrl, listingImage.getImageUrl(), "Getter should return the value set by the setter");
     }
 
     @Test
     @DisplayName("Test Primary Image Flag")
     void testIsPrimary() {
         listingImage.setPrimary(false);
-        assertFalse(listingImage.isPrimary());
+        boolean firstCheck = listingImage.isPrimary();
 
         listingImage.setPrimary(true);
-        assertTrue(listingImage.isPrimary());
+        boolean secondCheck = listingImage.isPrimary();
+
+        assertAll("Verify primary flag setting",
+            () -> assertFalse(firstCheck, "ListingImage primary flag should be false after setting it to false"),
+            () -> assertTrue(secondCheck, "ListingImage primary flag should be true after setting it to true")
+        );
     }
 
     @Test
@@ -78,8 +83,10 @@ class ListingImageTest {
         Listing anotherListing = new Listing();
         listingImage.setListing(anotherListing);
 
-        assertEquals(anotherListing, listingImage.getListing());
-        assertNotNull(listingImage.getListing());
+        assertAll("Verify listing relationship",
+                () -> assertEquals(anotherListing, listingImage.getListing(), "Listing relationship should match the assigned listing"),
+                () -> assertNotNull(listingImage.getListing(), "Listing relationship should not be null")
+        );
     }
 
     @Test
@@ -87,16 +94,16 @@ class ListingImageTest {
     void testConstructors() {
         // Test NoArgsConstructor
         ListingImage emptyImage = new ListingImage();
-        assertNull(emptyImage.getImageUrl());
 
         // Test AllArgsConstructor
         UUID randomId = UUID.randomUUID();
         ListingImage fullImage = new ListingImage(randomId, "https://url.com", true, mockListing);
 
-        assertAll(
-                () -> assertEquals(randomId, fullImage.getId()),
-                () -> assertTrue(fullImage.isPrimary()),
-                () -> assertEquals(mockListing, fullImage.getListing())
+        assertAll("Verify constructors",
+                () -> assertNull(emptyImage.getImageUrl(), "No-args constructor should initialize imageUrl as null"),
+                () -> assertEquals(randomId, fullImage.getId(), "All-args constructor should correctly assign ID"),
+                () -> assertTrue(fullImage.isPrimary(), "All-args constructor should correctly assign primary flag"),
+                () -> assertEquals(mockListing, fullImage.getListing(), "All-args constructor should correctly assign listing")
         );
     }
 }

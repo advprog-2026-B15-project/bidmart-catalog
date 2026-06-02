@@ -35,7 +35,9 @@ public class CatalogEventProducer {
                         .build())
                 .build();
 
-        log.info("[CatalogProducer] Publishing ListingPublishedEvent for listingId={}", listing.getId());
+        if (log.isInfoEnabled()) {
+            log.info("[CatalogProducer] Publishing ListingPublishedEvent for listingId={}", listing.getId());
+        }
         
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_AUCTION_EVENTS,

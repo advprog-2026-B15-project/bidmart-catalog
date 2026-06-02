@@ -19,6 +19,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -30,6 +32,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuctionClosedConsumerTest {
+    
+    private static final String AUCTION_CLOSED = "AuctionClosed";
 
     @Mock ListingService listingService;
     @Mock ProcessedEventRepository processedEventRepository;
@@ -44,7 +48,7 @@ class AuctionClosedConsumerTest {
     private AuctionClosedEvent buildEvent(String eventId) {
         AuctionClosedEvent event = new AuctionClosedEvent();
         event.setEventId(eventId);
-        event.setEventType("AuctionClosed");
+        event.setEventType(AUCTION_CLOSED);
         event.setOccurredAt(Instant.now());
 
         AuctionClosedEvent.Payload payload = new AuctionClosedEvent.Payload();
@@ -63,13 +67,17 @@ class AuctionClosedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(listingService).closeListing(LISTING_ID);
         ArgumentCaptor<ProcessedEvent> captor = ArgumentCaptor.forClass(ProcessedEvent.class);
-        verify(processedEventRepository).save(captor.capture());
-        assertThat(captor.getValue().getEventId()).isEqualTo(EVENT_ID);
-        assertThat(captor.getValue().getEventType()).isEqualTo("AuctionClosed");
-        verify(channel).basicAck(DELIVERY_TAG, false);
-        verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean());
+        assertAll("Verify close listing and ack",
+            () -> verify(listingService).closeListing(LISTING_ID),
+            () -> {
+                verify(processedEventRepository).save(captor.capture());
+                assertThat(captor.getValue().getEventId()).as("Event ID should match").isEqualTo(EVENT_ID);
+                assertThat(captor.getValue().getEventType()).as("Event type should match").isEqualTo(AUCTION_CLOSED);
+            },
+            () -> verify(channel).basicAck(DELIVERY_TAG, false),
+            () -> verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean())
+        );
     }
 
     @Test
@@ -79,8 +87,10 @@ class AuctionClosedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(listingService, never()).closeListing(any());
-        verify(channel).basicAck(DELIVERY_TAG, false);
+        assertAll("Verify idempotency - skip and ack",
+            () -> verify(listingService, never()).closeListing(any()),
+            () -> verify(channel).basicAck(DELIVERY_TAG, false)
+        );
     }
 
     @Test
@@ -88,8 +98,10 @@ class AuctionClosedConsumerTest {
     void handle_nullEventId_skipsAndAcks() throws IOException {
         consumer.handle(buildEvent(null), channel, DELIVERY_TAG);
 
-        verify(listingService, never()).closeListing(any());
-        verify(channel).basicAck(DELIVERY_TAG, false);
+        assertAll("Verify null event ID - skip and ack",
+            () -> verify(listingService, never()).closeListing(any()),
+            () -> verify(channel).basicAck(DELIVERY_TAG, false)
+        );
     }
 
     @Test
@@ -101,8 +113,10 @@ class AuctionClosedConsumerTest {
 
         consumer.handle(event, channel, DELIVERY_TAG);
 
-        verify(channel).basicNack(DELIVERY_TAG, false, false);
-        verify(listingService, never()).closeListing(any());
+        assertAll("Verify invalid payload - nack",
+            () -> verify(channel).basicNack(DELIVERY_TAG, false, false),
+            () -> verify(listingService, never()).closeListing(any())
+        );
     }
 
     @Test
@@ -114,7 +128,9 @@ class AuctionClosedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(channel).basicNack(DELIVERY_TAG, false, false);
-        verify(processedEventRepository, never()).save(any());
+        assertAll("Verify listing not found - nack",
+            () -> verify(channel).basicNack(DELIVERY_TAG, false, false),
+            () -> verify(processedEventRepository, never()).save(any())
+        );
     }
 }

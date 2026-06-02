@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,9 +24,11 @@ class ListingTest {
     @Test
     void testListingDefaultValues() {
         // Memastikan inisialisasi default dari Java dan @Builder.Default Lombok berjalan
-        assertNotNull(listing.getImages(), "Daftar gambar tidak boleh null");
-        assertTrue(listing.getImages().isEmpty(), "Daftar gambar harus kosong saat pertama kali dibuat");
-        assertEquals(ListingStatus.DRAFT, listing.getStatus(), "Status awal harus DRAFT");
+        assertAll("Default values should be correctly initialized",
+                () -> assertNotNull(listing.getImages(), "Daftar gambar tidak boleh null"),
+                () -> assertTrue(listing.getImages().isEmpty(), "Daftar gambar harus kosong saat pertama kali dibuat"),
+                () -> assertEquals(ListingStatus.DRAFT, listing.getStatus(), "Status awal harus DRAFT")
+        );
     }
 
     @Test
@@ -57,18 +60,20 @@ class ListingTest {
         listing.setStatus(ListingStatus.ACTIVE);
 
         // Menguji Getter
-        assertEquals(id, listing.getId());
-        assertEquals(title, listing.getTitle());
-        assertEquals(description, listing.getDescription());
-        assertEquals(category, listing.getCategory());
-        assertEquals(sellerId, listing.getSellerId());
-        assertEquals(startingPrice, listing.getStartingPrice());
-        assertEquals(currentPrice, listing.getCurrentPrice());
-        assertEquals(reservePrice, listing.getReservePrice());
-        assertEquals(endTime, listing.getEndTime());
-        assertEquals(createdAt, listing.getCreatedAt());
-        assertEquals(updatedAt, listing.getUpdatedAt());
-        assertEquals(ListingStatus.ACTIVE, listing.getStatus());
+        assertAll("Getters should return values set by setters",
+                () -> assertEquals(id, listing.getId(), "ID should match"),
+                () -> assertEquals(title, listing.getTitle(), "Title should match"),
+                () -> assertEquals(description, listing.getDescription(), "Description should match"),
+                () -> assertEquals(category, listing.getCategory(), "Category should match"),
+                () -> assertEquals(sellerId, listing.getSellerId(), "Seller ID should match"),
+                () -> assertEquals(startingPrice, listing.getStartingPrice(), "Starting price should match"),
+                () -> assertEquals(currentPrice, listing.getCurrentPrice(), "Current price should match"),
+                () -> assertEquals(reservePrice, listing.getReservePrice(), "Reserve price should match"),
+                () -> assertEquals(endTime, listing.getEndTime(), "End time should match"),
+                () -> assertEquals(createdAt, listing.getCreatedAt(), "Created at should match"),
+                () -> assertEquals(updatedAt, listing.getUpdatedAt(), "Updated at should match"),
+                () -> assertEquals(ListingStatus.ACTIVE, listing.getStatus(), "Status should match")
+        );
     }
 
     @Test
@@ -85,15 +90,15 @@ class ListingTest {
                 .endTime(endTime)
                 .build();
 
-        assertEquals(id, builtListing.getId());
-        assertEquals("iPad Pro", builtListing.getTitle());
-        assertEquals("seller-456", builtListing.getSellerId());
-        assertEquals(10000000.0, builtListing.getStartingPrice());
-        assertEquals(endTime, builtListing.getEndTime());
-
-        // Memastikan default values tetap teraplikasi saat menggunakan Builder
-        assertNotNull(builtListing.getImages());
-        assertEquals(ListingStatus.DRAFT, builtListing.getStatus());
+        assertAll("Builder should correctly initialize fields",
+                () -> assertEquals(id, builtListing.getId(), "ID should match built value"),
+                () -> assertEquals("iPad Pro", builtListing.getTitle(), "Title should match built value"),
+                () -> assertEquals("seller-456", builtListing.getSellerId(), "Seller ID should match built value"),
+                () -> assertEquals(10000000.0, builtListing.getStartingPrice(), "Starting price should match built value"),
+                () -> assertEquals(endTime, builtListing.getEndTime(), "End time should match built value"),
+                () -> assertNotNull(builtListing.getImages(), "Images list should not be null"),
+                () -> assertEquals(ListingStatus.DRAFT, builtListing.getStatus(), "Status should be DRAFT by default")
+        );
     }
 
     @Test
@@ -103,7 +108,9 @@ class ListingTest {
 
         listing.getImages().add(image);
 
-        assertEquals(1, listing.getImages().size());
-        assertEquals("/uploads/test.jpg", listing.getImages().get(0).getImageUrl());
+        assertAll("Adding image to listing should update the images list",
+                () -> assertEquals(1, listing.getImages().size(), "Images list should contain 1 element"),
+                () -> assertEquals("/uploads/test.jpg", listing.getImages().get(0).getImageUrl(), "Image URL should match")
+        );
     }
 }

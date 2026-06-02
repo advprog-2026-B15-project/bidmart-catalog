@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/uploads")
@@ -32,7 +33,7 @@ public class ImageController {
                 return ResponseEntity.notFound().build();
             }
             String contentType = MediaType.IMAGE_JPEG_VALUE;
-            String lower = filename.toLowerCase();
+            String lower = filename.toLowerCase(Locale.ROOT);
             if (lower.endsWith(".png")) contentType = MediaType.IMAGE_PNG_VALUE;
             else if (lower.endsWith(".webp")) contentType = "image/webp";
             else if (lower.endsWith(".gif")) contentType = MediaType.IMAGE_GIF_VALUE;

@@ -14,6 +14,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,10 +40,13 @@ class CatalogFunctionalTest {
         
         String title = driver.getTitle();
         // Adjust based on your Thymeleaf page title
-        assertNotNull(title);
         
         WebElement header = driver.findElement(By.tagName("h1"));
-        assertTrue(header.getText().contains("Katalog Lelang") || header.getText().contains("Listings"));
+        assertAll("Check Catalog Page Title and Header",
+                () -> assertNotNull(title, "Page title should not be null"),
+                () -> assertTrue(header.getText().contains("Katalog Lelang") || header.getText().contains("Listings"),
+                        "Header should contain 'Katalog Lelang' or 'Listings'")
+        );
     }
 
     @Test
@@ -53,6 +57,6 @@ class CatalogFunctionalTest {
         WebElement createLink = driver.findElement(By.linkText("Buat Listing Baru"));
         createLink.click();
         
-        assertEquals(baseUrl + "/listings/create", driver.getCurrentUrl());
+        assertEquals(baseUrl + "/listings/create", driver.getCurrentUrl(), "Should navigate to the create listing page");
     }
 }

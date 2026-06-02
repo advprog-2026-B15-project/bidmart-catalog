@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,8 +45,11 @@ class CategoryServiceTest {
     void testGetCategoryIdsNoSub() {
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(sampleCategory));
         List<UUID> result = categoryService.getCategoryAndSubCategoryIds(categoryId);
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0)).isEqualTo(categoryId);
+        
+        assertAll("Verify category IDs without subcategories",
+            () -> assertThat(result).as("Result list size should be 1").hasSize(1),
+            () -> assertThat(result.get(0)).as("Result list should contain category ID").isEqualTo(categoryId)
+        );
     }
 
     @Test
@@ -58,8 +62,10 @@ class CategoryServiceTest {
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(sampleCategory));
         List<UUID> result = categoryService.getCategoryAndSubCategoryIds(categoryId);
 
-        assertThat(result).hasSize(2);
-        assertThat(result).contains(categoryId, subId);
+        assertAll("Verify category IDs with subcategories",
+            () -> assertThat(result).as("Result list size should be 2").hasSize(2),
+            () -> assertThat(result).as("Result list should contain both IDs").contains(categoryId, subId)
+        );
     }
 
     @Test

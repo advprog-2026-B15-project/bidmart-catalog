@@ -11,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +22,7 @@ import java.util.List;
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -37,6 +39,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ListingController.class)
 class ListingControllerTest {
+
+    private static final String LISTINGS_PATH = "/listings";
+    private static final String ERROR_ATTR = "error";
+    private static final String EDIT_PATH = "/edit";
+    private static final String REDIRECT_LISTINGS = "redirect:/listings";
 
     @Autowired
     private MockMvc mockMvc;
@@ -55,21 +62,26 @@ class ListingControllerTest {
     void testCreateListing() throws Exception {
         MockMultipartFile file = new MockMultipartFile("imageFiles", "img.jpg", "image/jpeg", "data".getBytes());
 
-        mockMvc.perform(multipart("/listings/create")
+        ResultActions result = mockMvc.perform(multipart(LISTINGS_PATH + "/create")
                         .file(file)
-                        .param("title", "Samsak Tinju"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/listings"));
-
-        verify(listingService).createListing(any(), any());
+                        .param("title", "Samsak Tinju"));
+        
+        assertAll("Verify create listing success",
+            () -> result.andExpect(status().is3xxRedirection()),
+            () -> result.andExpect(redirectedUrl(LISTINGS_PATH)),
+            () -> verify(listingService).createListing(any(), any())
+        );
     }
 
     @Test
     @DisplayName("POST /listings/{id}/publish - Coverage Success")
     void testPublishSuccess() throws Exception {
         UUID id = UUID.randomUUID();
-        mockMvc.perform(post("/listings/" + id + "/publish"))
-                .andExpect(flash().attribute("message", "Listing published successfully"));
+        ResultActions result = mockMvc.perform(post(LISTINGS_PATH + "/" + id + "/publish"));
+        
+        assertAll("Verify publish success",
+            () -> result.andExpect(flash().attribute("message", "Listing published successfully"))
+        );
     }
 
     @Test
@@ -78,8 +90,11 @@ class ListingControllerTest {
         UUID id = UUID.randomUUID();
         doThrow(new RuntimeException()).when(listingService).publishListing(id);
 
-        mockMvc.perform(post("/listings/" + id + "/publish"))
-                .andExpect(flash().attribute("error", "Listing cannot be published"));
+        ResultActions result = mockMvc.perform(post(LISTINGS_PATH + "/" + id + "/publish"));
+        
+        assertAll("Verify publish failure",
+            () -> result.andExpect(flash().attribute(ERROR_ATTR, "Listing cannot be published"))
+        );
     }
 
     @Test
@@ -90,10 +105,13 @@ class ListingControllerTest {
         listing.setTitle("Bola Basket");
         when(listingService.getListingById(id)).thenReturn(listing);
 
-        mockMvc.perform(get("/listings/" + id))
-                .andExpect(status().isOk())
-                .andExpect(view().name("listing-detail"))
-                .andExpect(model().attribute("listing", listing));
+        ResultActions result = mockMvc.perform(get(LISTINGS_PATH + "/" + id));
+        
+        assertAll("Verify get detail success",
+            () -> result.andExpect(status().isOk()),
+            () -> result.andExpect(view().name("listing-detail")),
+            () -> result.andExpect(model().attribute("listing", listing))
+        );
     }
 
     @Test
@@ -110,14 +128,17 @@ class ListingControllerTest {
                 .thenReturn(listingPage);
 
         // 3. Jalankan request dan verifikasi model attribute
-        mockMvc.perform(get("/listings")
+        ResultActions result = mockMvc.perform(get(LISTINGS_PATH)
                         .param("page", "0")
-                        .param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("listings"))
-                .andExpect(model().attribute("listings", listingList))
-                .andExpect(model().attribute("currentPage", 0))
-                .andExpect(model().attribute("totalPages", 1));
+                        .param("size", "10"));
+        
+        assertAll("Verify get listings success",
+            () -> result.andExpect(status().isOk()),
+            () -> result.andExpect(view().name("listings")),
+            () -> result.andExpect(model().attribute("listings", listingList)),
+            () -> result.andExpect(model().attribute("currentPage", 0)),
+            () -> result.andExpect(model().attribute("totalPages", 1))
+        );
     }
 
     @Test
@@ -130,21 +151,27 @@ class ListingControllerTest {
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(categories);
 
         // 2. Verifikasi form baru dan list kategori dikirim ke view
-        mockMvc.perform(get("/listings/create"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("create-listing"))
-                .andExpect(model().attributeExists("listing"))
-                .andExpect(model().attribute("categories", categories));
+        ResultActions result = mockMvc.perform(get(LISTINGS_PATH + "/create"));
+        
+        assertAll("Verify create listing form success",
+            () -> result.andExpect(status().isOk()),
+            () -> result.andExpect(view().name("create-listing")),
+            () -> result.andExpect(model().attributeExists("listing")),
+            () -> result.andExpect(model().attribute("categories", categories))
+        );
     }
 
     @Test
     @DisplayName("POST /listings/{id}/delete - Success")
     void testDeleteListingSuccess() throws Exception {
         UUID id = UUID.randomUUID();
-        mockMvc.perform(post("/listings/" + id + "/delete"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/listings"));
-        verify(listingService).deleteListing(id);
+        ResultActions result = mockMvc.perform(post(LISTINGS_PATH + "/" + id + "/delete"));
+        
+        assertAll("Verify delete listing success",
+            () -> result.andExpect(status().is3xxRedirection()),
+            () -> result.andExpect(redirectedUrl(LISTINGS_PATH)),
+            () -> verify(listingService).deleteListing(id)
+        );
     }
 
     @Test
@@ -152,9 +179,12 @@ class ListingControllerTest {
     void testDeleteListingFailure() throws Exception {
         UUID id = UUID.randomUUID();
         doThrow(new IllegalStateException("Failure")).when(listingService).deleteListing(id);
-        mockMvc.perform(post("/listings/" + id + "/delete"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(flash().attribute("error", "Failure"));
+        ResultActions result = mockMvc.perform(post(LISTINGS_PATH + "/" + id + "/delete"));
+        
+        assertAll("Verify delete listing failure",
+            () -> result.andExpect(status().is3xxRedirection()),
+            () -> result.andExpect(flash().attribute(ERROR_ATTR, "Failure"))
+        );
     }
 
     @Test
@@ -166,10 +196,13 @@ class ListingControllerTest {
         when(listingService.getListingById(id)).thenReturn(listing);
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(List.of());
 
-        mockMvc.perform(get("/listings/" + id + "/edit"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("edit-listing"))
-                .andExpect(model().attribute("listing", listing));
+        ResultActions result = mockMvc.perform(get(LISTINGS_PATH + "/" + id + EDIT_PATH));
+        
+        assertAll("Verify edit listing form success",
+            () -> result.andExpect(status().isOk()),
+            () -> result.andExpect(view().name("edit-listing")),
+            () -> result.andExpect(model().attribute("listing", listing))
+        );
     }
 
     @Test
@@ -180,10 +213,13 @@ class ListingControllerTest {
         listing.setBidCount(1);
         when(listingService.getListingById(id)).thenReturn(listing);
 
-        mockMvc.perform(get("/listings/" + id + "/edit"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/listings/" + id))
-                .andExpect(flash().attribute("error", "Tidak bisa mengedit: Sudah ada penawaran!"));
+        ResultActions result = mockMvc.perform(get(LISTINGS_PATH + "/" + id + EDIT_PATH));
+        
+        assertAll("Verify edit listing form forbidden",
+            () -> result.andExpect(status().is3xxRedirection()),
+            () -> result.andExpect(redirectedUrl(LISTINGS_PATH + "/" + id)),
+            () -> result.andExpect(flash().attribute(ERROR_ATTR, "Tidak bisa mengedit: Sudah ada penawaran!"))
+        );
     }
 
     @Test
@@ -192,20 +228,26 @@ class ListingControllerTest {
         UUID id = UUID.randomUUID();
         when(listingService.getListingById(id)).thenThrow(new RuntimeException("Error"));
 
-        mockMvc.perform(get("/listings/" + id + "/edit"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/listings"));
+        ResultActions result = mockMvc.perform(get(LISTINGS_PATH + "/" + id + EDIT_PATH));
+        
+        assertAll("Verify edit listing form exception",
+            () -> result.andExpect(status().is3xxRedirection()),
+            () -> result.andExpect(redirectedUrl(LISTINGS_PATH))
+        );
     }
 
     @Test
     @DisplayName("POST /listings/{id}/edit - Success")
     void testUpdateListingSuccess() throws Exception {
         UUID id = UUID.randomUUID();
-        mockMvc.perform(post("/listings/" + id + "/edit")
-                        .param("title", "Updated"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/listings/" + id));
-        verify(listingService).updateListing(eq(id), any());
+        ResultActions result = mockMvc.perform(post(LISTINGS_PATH + "/" + id + EDIT_PATH)
+                        .param("title", "Updated"));
+        
+        assertAll("Verify update listing success",
+            () -> result.andExpect(status().is3xxRedirection()),
+            () -> result.andExpect(redirectedUrl(LISTINGS_PATH + "/" + id)),
+            () -> verify(listingService).updateListing(eq(id), any())
+        );
     }
 
     @Test
@@ -213,10 +255,12 @@ class ListingControllerTest {
     void testUpdateListingFailure() throws Exception {
         UUID id = UUID.randomUUID();
         doThrow(new IllegalStateException("Err")).when(listingService).updateListing(eq(id), any());
-        mockMvc.perform(post("/listings/" + id + "/edit")
-                        .param("title", "Updated"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(flash().attribute("error", "Err"));
+        ResultActions result = mockMvc.perform(post(LISTINGS_PATH + "/" + id + EDIT_PATH)
+                        .param("title", "Updated"));
+        
+        assertAll("Verify update listing failure",
+            () -> result.andExpect(status().is3xxRedirection()),
+            () -> result.andExpect(flash().attribute(ERROR_ATTR, "Err"))
+        );
     }
 }
-

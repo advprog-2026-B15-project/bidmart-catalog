@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,6 +22,7 @@ class ListingRepositoryTest {
     @Autowired
     private ListingRepository listingRepository;
 
+    private static final String RAKET_BADMINTON = "Raket Badminton";
     private String sellerId = "user-123";
 
     @BeforeEach
@@ -29,7 +31,7 @@ class ListingRepositoryTest {
         java.time.LocalDateTime futureDate = java.time.LocalDateTime.now().plusDays(7);
 
         Listing listing1 = Listing.builder()
-                .title("Raket Badminton")
+                .title(RAKET_BADMINTON)
                 .sellerId(sellerId)
                 .status(ListingStatus.ACTIVE)
                 .startingPrice(500000.0)
@@ -53,8 +55,10 @@ class ListingRepositoryTest {
     @DisplayName("Test findBySellerId - Should return all listings for a seller")
     void testFindBySellerId() {
         List<Listing> found = listingRepository.findBySellerId(sellerId);
-        assertEquals(2, found.size());
-        assertTrue(found.stream().anyMatch(l -> l.getTitle().equals("Raket Badminton")));
+        assertAll("Verify find by seller ID",
+            () -> assertEquals(2, found.size(), "Should return 2 listings"),
+            () -> assertTrue(found.stream().anyMatch(l -> RAKET_BADMINTON.equals(l.getTitle())), "Should contain " + RAKET_BADMINTON)
+        );
     }
 
     @Test
@@ -65,7 +69,9 @@ class ListingRepositoryTest {
                 PageRequest.of(0, 10)
         );
 
-        assertEquals(1, activePage.getTotalElements());
-        assertEquals("Raket Badminton", activePage.getContent().get(0).getTitle());
+        assertAll("Verify find by status",
+            () -> assertEquals(1, activePage.getTotalElements(), "Should return 1 active listing"),
+            () -> assertEquals(RAKET_BADMINTON, activePage.getContent().get(0).getTitle(), "Title should match " + RAKET_BADMINTON)
+        );
     }
 }

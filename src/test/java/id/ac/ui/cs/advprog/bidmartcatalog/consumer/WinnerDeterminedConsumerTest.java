@@ -19,6 +19,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -63,11 +65,15 @@ class WinnerDeterminedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(listingService).closeListing(LISTING_ID);
         ArgumentCaptor<ProcessedEvent> captor = ArgumentCaptor.forClass(ProcessedEvent.class);
-        verify(processedEventRepository).save(captor.capture());
-        assertThat(captor.getValue().getEventId()).isEqualTo(EVENT_ID);
-        verify(channel).basicAck(DELIVERY_TAG, false);
+        assertAll("Verify close and ack",
+            () -> verify(listingService).closeListing(LISTING_ID),
+            () -> {
+                verify(processedEventRepository).save(captor.capture());
+                assertThat(captor.getValue().getEventId()).as("Event ID should match").isEqualTo(EVENT_ID);
+            },
+            () -> verify(channel).basicAck(DELIVERY_TAG, false)
+        );
     }
 
     @Test
@@ -77,8 +83,10 @@ class WinnerDeterminedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(listingService, never()).closeListing(any());
-        verify(channel).basicAck(DELIVERY_TAG, false);
+        assertAll("Verify idempotency - skip and ack",
+            () -> verify(listingService, never()).closeListing(any()),
+            () -> verify(channel).basicAck(DELIVERY_TAG, false)
+        );
     }
 
     @Test
@@ -91,7 +99,9 @@ class WinnerDeterminedConsumerTest {
 
         consumer.handle(event, channel, DELIVERY_TAG);
 
-        verify(channel).basicNack(DELIVERY_TAG, false, false);
+        assertAll("Verify invalid payload - nack",
+            () -> verify(channel).basicNack(DELIVERY_TAG, false, false)
+        );
     }
 
     @Test
@@ -102,6 +112,8 @@ class WinnerDeterminedConsumerTest {
 
         consumer.handle(buildEvent(EVENT_ID), channel, DELIVERY_TAG);
 
-        verify(channel).basicNack(DELIVERY_TAG, false, false);
+        assertAll("Verify system error - nack",
+            () -> verify(channel).basicNack(DELIVERY_TAG, false, false)
+        );
     }
 }

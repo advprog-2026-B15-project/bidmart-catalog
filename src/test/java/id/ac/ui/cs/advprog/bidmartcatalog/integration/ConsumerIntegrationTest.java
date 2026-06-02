@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
-
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -91,8 +91,10 @@ class ConsumerIntegrationTest {
                 mockChannel, 1L);
 
         Listing updated = listingRepository.findById(savedListing.getId()).orElseThrow();
-        assertThat(updated.getCurrentPrice()).isEqualTo(1_500_000.0);
-        assertThat(updated.getBidCount()).isEqualTo(1);
+        assertAll("Verify price and bid count update",
+            () -> assertThat(updated.getCurrentPrice()).as("Current price should be updated").isEqualTo(1_500_000.0),
+            () -> assertThat(updated.getBidCount()).as("Bid count should be incremented").isEqualTo(1)
+        );
     }
 
     @Test
@@ -102,10 +104,12 @@ class ConsumerIntegrationTest {
         bidPlacedConsumer.handle(buildBidPlacedEvent(eventId, savedListing.getId(), 1_500_000L),
                 mockChannel, 1L);
 
-        assertThat(processedEventRepository.existsByEventId(eventId)).isTrue();
         ProcessedEvent pe = processedEventRepository.findAll().get(0);
-        assertThat(pe.getEventType()).isEqualTo("BidPlaced");
-        assertThat(pe.getProcessedAt()).isNotNull();
+        assertAll("Verify processed event saved",
+            () -> assertThat(processedEventRepository.existsByEventId(eventId)).as("Processed event should exist").isTrue(),
+            () -> assertThat(pe.getEventType()).as("Event type should be BidPlaced").isEqualTo("BidPlaced"),
+            () -> assertThat(pe.getProcessedAt()).as("Processed date should be set").isNotNull()
+        );
     }
 
     @Test
@@ -118,8 +122,10 @@ class ConsumerIntegrationTest {
                 mockChannel, 2L);
 
         Listing after = listingRepository.findById(savedListing.getId()).orElseThrow();
-        assertThat(after.getCurrentPrice()).isEqualTo(1_500_000.0);
-        assertThat(after.getBidCount()).isEqualTo(1);
+        assertAll("Verify duplicate event does not update DB",
+            () -> assertThat(after.getCurrentPrice()).as("Price should remain from first event").isEqualTo(1_500_000.0),
+            () -> assertThat(after.getBidCount()).as("Bid count should remain from first event").isEqualTo(1)
+        );
     }
 
     @Test
@@ -130,12 +136,15 @@ class ConsumerIntegrationTest {
             bidPlacedConsumer.handle(buildBidPlacedEvent(eventId, savedListing.getId(), 800_000L),
                     mockChannel, 1L);
         } catch (Exception e) {
-            // UnexpectedRollbackException might happen here, we ignore it to check the DB state
+            // Expected: UnexpectedRollbackException might happen here, we ignore it to check the DB state.
+            // PMD: Ignored because we verify the DB state after failure.
         }
 
         Listing unchanged = listingRepository.findById(savedListing.getId()).orElseThrow();
-        assertThat(unchanged.getCurrentPrice()).isEqualTo(1_000_000.0);
-        assertThat(unchanged.getBidCount()).isEqualTo(0);
+        assertAll("Verify out-of-order bid does not update DB",
+            () -> assertThat(unchanged.getCurrentPrice()).as("Price should remain unchanged").isEqualTo(1_000_000.0),
+            () -> assertThat(unchanged.getBidCount()).as("Bid count should remain unchanged").isEqualTo(0)
+        );
     }
 
     // ── AuctionClosed ─────────────────────────────────────────────────────────
@@ -148,7 +157,7 @@ class ConsumerIntegrationTest {
                 mockChannel, 1L);
 
         Listing closed = listingRepository.findById(savedListing.getId()).orElseThrow();
-        assertThat(closed.getStatus()).isEqualTo(ListingStatus.CLOSED);
+        assertThat(closed.getStatus()).as("Status should be CLOSED").isEqualTo(ListingStatus.CLOSED);
     }
 
     @Test
@@ -158,9 +167,11 @@ class ConsumerIntegrationTest {
         auctionClosedConsumer.handle(buildAuctionClosedEvent(eventId, savedListing.getId()),
                 mockChannel, 1L);
 
-        assertThat(processedEventRepository.existsByEventId(eventId)).isTrue();
-        ProcessedEvent pe = processedEventRepository.findAll().get(0);
-        assertThat(pe.getEventType()).isEqualTo("AuctionClosed");
+        assertAll("Verify processed event saved",
+            () -> assertThat(processedEventRepository.existsByEventId(eventId)).as("Processed event should exist").isTrue(),
+            () -> assertThat(processedEventRepository.findAll().get(0).getEventType())
+                    .as("Event type should be AuctionClosed").isEqualTo("AuctionClosed")
+        );
     }
 
     @Test
@@ -172,9 +183,11 @@ class ConsumerIntegrationTest {
         auctionClosedConsumer.handle(buildAuctionClosedEvent(eventId, savedListing.getId()),
                 mockChannel, 2L);
 
-        assertThat(processedEventRepository.count()).isEqualTo(1);
         Listing closed = listingRepository.findById(savedListing.getId()).orElseThrow();
-        assertThat(closed.getStatus()).isEqualTo(ListingStatus.CLOSED);
+        assertAll("Verify idempotency of AuctionClosed event",
+            () -> assertThat(processedEventRepository.count()).as("Only one processed event should be saved").isEqualTo(1),
+            () -> assertThat(closed.getStatus()).as("Status should be CLOSED").isEqualTo(ListingStatus.CLOSED)
+        );
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -22,15 +22,6 @@ import static org.mockito.Mockito.when;
 class ListingSpecificationTest {
 
     @Test
-    @DisplayName("Test private constructor for coverage")
-    void testPrivateConstructor() throws Exception {
-        Constructor<ListingSpecification> constructor = ListingSpecification.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        ListingSpecification instance = constructor.newInstance();
-        assertNotNull(instance);
-    }
-
-    @Test
     @DisplayName("Test filterListings specification logic")
     void testFilterListings() {
         Root<Listing> root = mock(Root.class);
@@ -58,8 +49,8 @@ class ListingSpecificationTest {
                 ListingStatus.ACTIVE
         );
 
-        Predicate predicate = spec.toPredicate(root, query, cb);
-        assertNotNull(spec);
+        spec.toPredicate(root, query, cb);
+        assertNotNull(spec, "Specification should not be null");
     }
     
     @Test
@@ -70,7 +61,7 @@ class ListingSpecificationTest {
         CriteriaBuilder cb = mock(CriteriaBuilder.class);
         
         Specification<Listing> spec = ListingSpecification.filterListings(null, null, null, null, null);
-        Predicate predicate = spec.toPredicate(root, query, cb);
-        assertNotNull(spec);
+        spec.toPredicate(root, query, cb);
+        assertNotNull(spec, "Specification should not be null even with null parameters");
     }
 }

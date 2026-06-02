@@ -6,17 +6,21 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ListingRequestDTOTest {
 
+    private static final String TEST_TITLE = "Test Title";
+    private static final String TEST_DESCRIPTION = "Test Description";
+
     @Test
     @DisplayName("Test ListingRequestDTO Getters and Setters")
     void testGettersAndSetters() {
         ListingRequestDTO dto = new ListingRequestDTO();
-        dto.setTitle("Test Title");
-        dto.setDescription("Test Description");
+        dto.setTitle(TEST_TITLE);
+        dto.setDescription(TEST_DESCRIPTION);
         dto.setStartingPrice(100.0);
         dto.setReservePrice(150.0);
         UUID catId = UUID.randomUUID();
@@ -24,12 +28,14 @@ class ListingRequestDTOTest {
         LocalDateTime now = LocalDateTime.now();
         dto.setEndTime(now);
 
-        assertEquals("Test Title", dto.getTitle());
-        assertEquals("Test Description", dto.getDescription());
-        assertEquals(100.0, dto.getStartingPrice());
-        assertEquals(150.0, dto.getReservePrice());
-        assertEquals(catId, dto.getCategoryId());
-        assertEquals(now, dto.getEndTime());
+        assertAll("Verify all getters and setters",
+            () -> assertEquals(TEST_TITLE, dto.getTitle(), "Title should match"),
+            () -> assertEquals(TEST_DESCRIPTION, dto.getDescription(), "Description should match"),
+            () -> assertEquals(100.0, dto.getStartingPrice(), "Starting price should match"),
+            () -> assertEquals(150.0, dto.getReservePrice(), "Reserve price should match"),
+            () -> assertEquals(catId, dto.getCategoryId(), "Category ID should match"),
+            () -> assertEquals(now, dto.getEndTime(), "End time should match")
+        );
     }
 
     @Test
@@ -48,16 +54,18 @@ class ListingRequestDTOTest {
         dto2.setCategoryId(catId);
         dto2.setEndTime(now);
 
-        assertEquals(dto1, dto2);
-        assertEquals(dto1.hashCode(), dto2.hashCode());
+        assertAll("Verify equals and hashCode",
+            () -> assertEquals(dto1, dto2, "DTOs with same values should be equal"),
+            () -> assertEquals(dto1.hashCode(), dto2.hashCode(), "DTOs with same values should have same hashCode")
+        );
     }
 
     @Test
     @DisplayName("Test ListingRequestDTO ToString")
     void testToString() {
         ListingRequestDTO dto = new ListingRequestDTO();
-        dto.setTitle("Test");
+        dto.setTitle(TEST_TITLE);
         String toString = dto.toString();
-        assertTrue(toString.contains("title=Test"));
+        assertTrue(toString.contains("title=" + TEST_TITLE), "toString should contain the title");
     }
 }

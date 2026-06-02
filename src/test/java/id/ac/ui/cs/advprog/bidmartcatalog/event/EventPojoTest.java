@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.UUID;
-
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class EventPojoTest {
@@ -31,17 +31,19 @@ class EventPojoTest {
                 .payload(payload)
                 .build();
 
-        assertThat(event.getEventId()).isEqualTo("evt-1");
-        assertThat(event.getOccurredAt()).isEqualTo(now);
-        assertThat(event.getEventType()).isEqualTo("ListingPublished");
-        assertThat(event.getEventVersion()).isEqualTo(1);
-        assertThat(event.getSource()).isEqualTo("bidmart-catalog");
-        assertThat(event.getPayload().getListingId()).isEqualTo(id);
-        
-        // Coverage for no-args constructor and setters if necessary
-        ListingPublishedEvent emptyEvent = new ListingPublishedEvent();
-        emptyEvent.setEventId("id");
-        assertThat(emptyEvent.getEventId()).isEqualTo("id");
+        assertAll("Verify ListingPublishedEvent POJO fields",
+            () -> assertThat(event.getEventId()).as("Event ID should match").isEqualTo("evt-1"),
+            () -> assertThat(event.getOccurredAt()).as("OccurredAt should match").isEqualTo(now),
+            () -> assertThat(event.getEventType()).as("Event type should be ListingPublished").isEqualTo("ListingPublished"),
+            () -> assertThat(event.getEventVersion()).as("Version should be 1").isEqualTo(1),
+            () -> assertThat(event.getSource()).as("Source should be bidmart-catalog").isEqualTo("bidmart-catalog"),
+            () -> assertThat(event.getPayload().getListingId()).as("Payload listing ID should match").isEqualTo(id),
+            () -> {
+                ListingPublishedEvent emptyEvent = new ListingPublishedEvent();
+                emptyEvent.setEventId("id");
+                assertThat(emptyEvent.getEventId()).as("Setter/Getter for event ID should work").isEqualTo("id");
+            }
+        );
     }
 
     @Test
@@ -61,11 +63,14 @@ class EventPojoTest {
                 .payload(payload)
                 .build();
 
-        assertThat(event.getEventId()).isEqualTo("evt-2");
-        assertThat(event.getPayload().getWinnerUserId()).isEqualTo("winner");
-        
-        WinnerDeterminedEvent empty = new WinnerDeterminedEvent();
-        empty.setEventType("Type");
-        assertThat(empty.getEventType()).isEqualTo("Type");
+        assertAll("Verify WinnerDeterminedEvent POJO fields",
+            () -> assertThat(event.getEventId()).as("Event ID should match").isEqualTo("evt-2"),
+            () -> assertThat(event.getPayload().getWinnerUserId()).as("Winner user ID should match").isEqualTo("winner"),
+            () -> {
+                WinnerDeterminedEvent empty = new WinnerDeterminedEvent();
+                empty.setEventType("Type");
+                assertThat(empty.getEventType()).as("Setter/Getter for event type should work").isEqualTo("Type");
+            }
+        );
     }
 }
