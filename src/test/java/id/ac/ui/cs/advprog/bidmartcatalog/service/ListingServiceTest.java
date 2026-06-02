@@ -13,6 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -219,10 +221,12 @@ class ListingServiceTest {
         @DisplayName("Sukses: mengembalikan map statistik")
         void success_returnsStats() {
             String sellerId = "seller-1";
-            when(listingRepository.countBySellerId(sellerId)).thenReturn(10L);
-            when(listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.ACTIVE)).thenReturn(5L);
-            when(listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.CLOSED)).thenReturn(3L);
-            when(listingRepository.countBySellerIdAndStatus(sellerId, ListingStatus.DRAFT)).thenReturn(2L);
+            List<Object[]> mockResults = new ArrayList<>();
+            mockResults.add(new Object[]{ListingStatus.ACTIVE, 5L});
+            mockResults.add(new Object[]{ListingStatus.CLOSED, 3L});
+            mockResults.add(new Object[]{ListingStatus.DRAFT, 2L});
+
+            when(listingRepository.countByStatusForSeller(sellerId)).thenReturn(mockResults);
 
             java.util.Map<String, Object> stats = listingService.getSellerStatistics(sellerId);
 
