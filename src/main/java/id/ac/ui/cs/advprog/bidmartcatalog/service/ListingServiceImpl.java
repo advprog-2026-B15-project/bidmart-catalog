@@ -5,7 +5,6 @@ import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingRepository;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingSpecification;
-import id.ac.ui.cs.advprog.bidmartcatalog.producer.CatalogEventProducer;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,14 +28,11 @@ public class ListingServiceImpl implements ListingService {
 
     private final ListingRepository listingRepository;
     private final StorageService storageService;
-    private final CatalogEventProducer eventProducer;
 
     public ListingServiceImpl(ListingRepository listingRepository, 
-                              StorageService storageService,
-                              CatalogEventProducer eventProducer) {
+                              StorageService storageService) {
         this.listingRepository = listingRepository;
         this.storageService = storageService;
-        this.eventProducer = eventProducer;
     }
 
     @Override
@@ -134,12 +130,7 @@ public class ListingServiceImpl implements ListingService {
         Listing listing = getListingById(id);
         if (listing.getStatus() == ListingStatus.DRAFT) {
             listing.setStatus(ListingStatus.ACTIVE);
-            Listing savedListing = listingRepository.save(listing);
-            
-            // Publish event ke RabbitMQ
-            eventProducer.sendListingPublished(savedListing);
-            
-            return savedListing;
+            return listingRepository.save(listing);
         }
         return listing;
     }
