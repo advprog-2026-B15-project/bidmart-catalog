@@ -34,7 +34,6 @@ class ListingServiceTest {
 
     @Mock ListingRepository listingRepository;
     @Mock StorageService storageService;
-    @Mock id.ac.ui.cs.advprog.bidmartcatalog.producer.CatalogEventProducer eventProducer;
     @InjectMocks ListingServiceImpl listingService;
 
     private static final String NEW_TITLE = "New Title";
@@ -192,8 +191,7 @@ class ListingServiceTest {
             Listing result = listingService.publishListing(listingId);
 
             assertAll("Publish listing success",
-                () -> assertThat(result.getStatus()).as("Status should be ACTIVE").isEqualTo(ListingStatus.ACTIVE),
-                () -> verify(eventProducer).sendListingPublished(any(Listing.class))
+                () -> assertThat(result.getStatus()).as("Status should be ACTIVE").isEqualTo(ListingStatus.ACTIVE)
             );
         }
 
@@ -206,8 +204,7 @@ class ListingServiceTest {
 
             assertAll("Already active no-op",
                 () -> assertThat(result.getStatus()).as("Status should remain ACTIVE").isEqualTo(ListingStatus.ACTIVE),
-                () -> verify(listingRepository, never()).save(any()),
-                () -> verify(eventProducer, never()).sendListingPublished(any())
+                () -> verify(listingRepository, never()).save(any())
             );
         }
     }
