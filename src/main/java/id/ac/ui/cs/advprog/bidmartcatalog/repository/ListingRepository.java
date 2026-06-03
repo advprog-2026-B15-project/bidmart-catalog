@@ -26,10 +26,6 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> , JpaSpe
     @Query("SELECT l FROM Listing l WHERE l.id = :id")
     Optional<Listing> findByIdWithDetails(@Param("id") UUID id);
 
-    @Override
-    @EntityGraph(attributePaths = {"images", "category"})
-    Page<Listing> findAll(Specification<Listing> spec, Pageable pageable);
-
     @Query("SELECT COUNT(l) FROM Listing l WHERE l.sellerId = :sellerId")
     long countBySellerId(@Param("sellerId") String sellerId);
 

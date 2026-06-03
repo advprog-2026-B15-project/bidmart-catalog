@@ -54,6 +54,7 @@ public class Listing {
 
     // Relasi ke ListingImage
     @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     @Builder.Default
     private List<ListingImage> images = new ArrayList<>();
 
