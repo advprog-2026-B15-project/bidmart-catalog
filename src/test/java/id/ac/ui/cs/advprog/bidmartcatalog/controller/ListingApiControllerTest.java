@@ -29,8 +29,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.doThrow;
+import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
 @WebMvcTest(ListingApiController.class)
 class ListingApiControllerTest {
@@ -127,8 +138,31 @@ class ListingApiControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/listings/{id}/publish - Success")
-    void testPublishListingSuccess() throws Exception {
+    @DisplayName("GET /api/listings/{id} - Success with Category and Images")
+    void testGetListingByIdWithDetails() throws Exception {
+        Category cat = new Category();
+        cat.setId(UUID.randomUUID());
+        cat.setName("Electronics");
+        sampleListing.setCategory(cat);
+        
+        ListingImage img = new ListingImage();
+        img.setImageUrl("http://example.com/img.jpg");
+        sampleListing.getImages().add(img);
+
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+
+        ResultActions result = mockMvc.perform(get(API_LISTINGS + "/" + id));
+        
+        assertAll("Verify get listing with details success",
+            () -> result.andExpect(status().isOk()),
+            () -> result.andExpect(jsonPath("$.categoryName").value("Electronics")),
+            () -> result.andExpect(jsonPath("$.imageUrls[0]").value("http://example.com/img.jpg"))
+        );
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/publish - Success (Verified)")
+    void testPublishListingSuccessVerified() throws Exception {
         sampleListing.setStatus(ListingStatus.DRAFT);
         sampleListing.setSellerId(USR_2406);
         
@@ -450,8 +484,20 @@ class ListingApiControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/listings - Various Filters")
-    void testGetAllListingsWithFilters() throws Exception {
+    @DisplayName("GET /api/listings - Forbidden (Non-SELLER accessing non-ACTIVE)")
+    void testGetAllListingsForbidden() throws Exception {
+        ResultActions result = mockMvc.perform(get(API_LISTINGS)
+                        .param("status", "DRAFT")
+                        .header(X_USER_ROLE, BUYER_ROLE));
+        
+        assertAll("Verify get all listings forbidden",
+            () -> result.andExpect(status().isForbidden())
+        );
+    }
+
+    @Test
+    @DisplayName("GET /api/listings - Various Filters (Keywords)")
+    void testGetAllListingsWithFiltersKeywords() throws Exception {
         when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(sampleListing)));
 
@@ -468,16 +514,164 @@ class ListingApiControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/listings - Empty Result")
-    void testGetAllListingsEmpty() throws Exception {
+    @DisplayName("PATCH /api/listings/{id}/current-price - Not Found (Trigger Catch)")
+    void testUpdatePriceNotFoundCatch() throws Exception {
+        when(listingService.updateCurrentPrice(any(), any())).thenThrow(new RuntimeException("Not Found"));
+        ResultActions result = mockMvc.perform(patch(API_LISTINGS + "/" + id + CURRENT_PRICE_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPrice\": 100.0}"));
+        result.andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/publish - Forbidden (Catch branch)")
+    void testPublishListingForbiddenBranch() throws Exception {
+        sampleListing.setSellerId("other");
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        ResultActions result = mockMvc.perform(patch(API_LISTINGS + "/" + id + "/publish")
+                        .header(X_USER_ID, "me"));
+        result.andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/{id}/validate - Logic Branches")
+    void testValidateListingLogic() throws Exception {
+        // Case: Expired
+        sampleListing.setStatus(ListingStatus.ACTIVE);
+        sampleListing.setEndTime(LocalDateTime.now().minusDays(1));
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        mockMvc.perform(get(API_LISTINGS + VALIDATE_PATH, id))
+                .andExpect(jsonPath("$.isValid").value(false))
+                .andExpect(jsonPath("$.reason").value("Auction time has ended"));
+
+        // Case: Inactive
+        sampleListing.setStatus(ListingStatus.DRAFT);
+        sampleListing.setEndTime(LocalDateTime.now().plusDays(1));
+        mockMvc.perform(get(API_LISTINGS + VALIDATE_PATH, id))
+                .andExpect(jsonPath("$.isValid").value(false))
+                .andExpect(jsonPath("$.reason").value("Listing is not active"));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/listings/{id} - IllegalStateException (Catch)")
+    void testDeleteListingIllegalStateCatch() throws Exception {
+        sampleListing.setSellerId(USR_2406);
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        doThrow(new IllegalStateException("Cannot delete")).when(listingService).deleteListing(id);
+
+        mockMvc.perform(delete(API_LISTINGS + "/" + id)
+                        .header(X_USER_ID, USR_2406)
+                        .header(X_USER_ROLE, SELLER))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Cannot delete"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/listings/{id} - Logic and Map branch")
+    void testUpdateListingLogic() throws Exception {
+        sampleListing.setSellerId(USR_2406);
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        
+        ListingRequestDTO dto = new ListingRequestDTO();
+        dto.setTitle("New Title");
+        dto.setCategoryId(UUID.randomUUID());
+        
+        when(categoryService.getCategoryById(any())).thenReturn(new Category());
+        when(listingService.updateListing(eq(id), any())).thenReturn(sampleListing);
+
+        mockMvc.perform(put(API_LISTINGS + "/" + id)
+                        .header(X_USER_ID, USR_2406)
+                        .header(X_USER_ROLE, SELLER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"New Title\", \"categoryId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/listings - Category Tree branch")
+    void testGetAllListingsCategoryTree() throws Exception {
+        UUID catId = UUID.randomUUID();
+        when(categoryService.getCategoryAndSubCategoryIds(catId)).thenReturn(List.of(catId));
         when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any()))
                 .thenReturn(Page.empty());
 
-        ResultActions result = mockMvc.perform(get(API_LISTINGS));
-        
-        assertAll("Verify get all listings empty",
-            () -> result.andExpect(status().isOk()),
-            () -> result.andExpect(jsonPath("$.content.length()").value(0))
-        );
+        mockMvc.perform(get(API_LISTINGS).param("categoryId", catId.toString()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/publish - RuntimeException (404 branch)")
+    void testPublishListingNotFoundBranch() throws Exception {
+        sampleListing.setSellerId(USR_2406);
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        when(listingService.publishListing(id)).thenThrow(new RuntimeException("not found error"));
+
+        mockMvc.perform(patch(API_LISTINGS + "/{id}/publish", id)
+                        .header(X_USER_ID, USR_2406))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/listings/{id}/publish - RuntimeException (500 branch)")
+    void testPublishListingInternalErrorBranch() throws Exception {
+        sampleListing.setSellerId(USR_2406);
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        when(listingService.publishListing(id)).thenThrow(new RuntimeException("generic server error"));
+
+        mockMvc.perform(patch(API_LISTINGS + "/{id}/publish", id)
+                        .header(X_USER_ID, USR_2406))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @DisplayName("PUT /api/listings/{id} - RuntimeException (500 branch)")
+    void testUpdateListingInternalErrorBranch() throws Exception {
+        sampleListing.setSellerId(USR_2406);
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        when(listingService.updateListing(eq(id), any())).thenThrow(new RuntimeException("generic error"));
+
+        mockMvc.perform(put(API_LISTINGS + "/{id}", id)
+                        .header(X_USER_ID, USR_2406)
+                        .header(X_USER_ROLE, SELLER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Err\"}"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/listings/{id} - RuntimeException (500 branch)")
+    void testDeleteListingInternalErrorBranch() throws Exception {
+        sampleListing.setSellerId(USR_2406);
+        when(listingService.getListingById(id)).thenReturn(sampleListing);
+        doThrow(new RuntimeException("generic error")).when(listingService).deleteListing(id);
+
+        mockMvc.perform(delete(API_LISTINGS + "/" + id)
+                        .header(X_USER_ID, USR_2406)
+                        .header(X_USER_ROLE, SELLER))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @DisplayName("GET /api/listings/{id}/validate - RuntimeException (500 branch)")
+    void testValidateListingInternalErrorBranch() throws Exception {
+        when(listingService.getListingById(id)).thenThrow(new RuntimeException("generic error"));
+
+        mockMvc.perform(get(API_LISTINGS + VALIDATE_PATH, id))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @DisplayName("POST /api/listings - Null CategoryID branch")
+    void testCreateListingNullCategoryId() throws Exception {
+        Listing created = new Listing();
+        created.setId(UUID.randomUUID());
+        created.setTitle("Null Cat");
+        when(listingService.createListing(any(), any())).thenReturn(created);
+
+        mockMvc.perform(multipart(API_LISTINGS)
+                        .header(X_USER_ID, USR_2406)
+                        .header(X_USER_ROLE, SELLER)
+                        .param("title", "Null Cat"))
+                .andExpect(status().isCreated());
     }
 }

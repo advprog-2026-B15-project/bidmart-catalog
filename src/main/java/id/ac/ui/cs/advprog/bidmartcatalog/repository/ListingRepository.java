@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ListingRepository extends JpaRepository<Listing, UUID> , JpaSpecificationExecutor<Listing> {
@@ -20,6 +21,10 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> , JpaSpe
 
     @EntityGraph(attributePaths = {"images", "category"})
     Page<Listing> findByStatus(ListingStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"images", "category"})
+    @Query("SELECT l FROM Listing l WHERE l.id = :id")
+    Optional<Listing> findByIdWithDetails(@Param("id") UUID id);
 
     @Override
     @EntityGraph(attributePaths = {"images", "category"})

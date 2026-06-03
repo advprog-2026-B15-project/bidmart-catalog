@@ -63,7 +63,7 @@ class ListingServiceTest {
         @Test
         @DisplayName("Sukses: update harga dan increment bidCount")
         void success_updatesAndIncrements() {
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
             Listing result = listingService.updateCurrentPrice(listingId, 1_600_000.0);
@@ -77,7 +77,7 @@ class ListingServiceTest {
         @Test
         @DisplayName("Gagal: harga baru <= currentPrice → IllegalArgumentException")
         void fail_newPriceTooLow_throwsException() {
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
 
             assertThatThrownBy(() -> listingService.updateCurrentPrice(listingId, 500_000.0))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -89,7 +89,7 @@ class ListingServiceTest {
         @Test
         @DisplayName("Gagal: listing tidak ditemukan → RuntimeException")
         void fail_listingNotFound_throwsException() {
-            when(listingRepository.findById(listingId)).thenReturn(Optional.empty());
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> listingService.updateCurrentPrice(listingId, 1_600_000.0))
                     .isInstanceOf(RuntimeException.class)
@@ -106,7 +106,7 @@ class ListingServiceTest {
         @Test
         @DisplayName("Sukses: status berubah menjadi CLOSED")
         void success_changesStatusToClosed() {
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
             Listing result = listingService.closeListing(listingId);
@@ -126,7 +126,7 @@ class ListingServiceTest {
         @DisplayName("Idempotent: listing sudah CLOSED tidak di-save ulang")
         void idempotent_alreadyClosed_doesNotSaveAgain() {
             activeListing.setStatus(ListingStatus.CLOSED);
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
 
             Listing result = listingService.closeListing(listingId);
 
@@ -139,7 +139,7 @@ class ListingServiceTest {
         @Test
         @DisplayName("Gagal: listing tidak ditemukan → RuntimeException")
         void fail_listingNotFound_throwsException() {
-            when(listingRepository.findById(listingId)).thenReturn(Optional.empty());
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> listingService.closeListing(listingId))
                     .isInstanceOf(RuntimeException.class)
@@ -157,7 +157,7 @@ class ListingServiceTest {
         @DisplayName("Gagal: sudah ada bid → IllegalStateException")
         void fail_hasBid_throwsIllegalState() {
             activeListing.setBidCount(3);
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
 
             Listing update = Listing.builder().title(NEW_TITLE).build();
             assertThatThrownBy(() -> listingService.updateListing(listingId, update))
@@ -168,7 +168,7 @@ class ListingServiceTest {
         @DisplayName("Gagal: listing CLOSED → IllegalStateException")
         void fail_isClosed_throwsIllegalState() {
             activeListing.setStatus(ListingStatus.CLOSED);
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
 
             Listing update = Listing.builder().title(NEW_TITLE).build();
             assertThatThrownBy(() -> listingService.updateListing(listingId, update))
@@ -186,7 +186,7 @@ class ListingServiceTest {
         @DisplayName("DRAFT → ACTIVE")
         void success_draftBecomesActive() {
             activeListing.setStatus(ListingStatus.DRAFT);
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
             Listing result = listingService.publishListing(listingId);
@@ -200,7 +200,7 @@ class ListingServiceTest {
         @Test
         @DisplayName("Sudah ACTIVE: tidak ada perubahan")
         void noOp_alreadyActive() {
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
 
             Listing result = listingService.publishListing(listingId);
 
@@ -237,6 +237,22 @@ class ListingServiceTest {
                 () -> assertThat(stats.get("draftListings")).as("Draft listings should match").isEqualTo(2L)
             );
         }
+
+        @Test
+        @DisplayName("Sukses: mengembalikan 0 jika tidak ada data")
+        void success_returnsEmptyStats() {
+            String sellerId = "seller-empty";
+            when(listingRepository.countByStatusForSeller(sellerId)).thenReturn(new ArrayList<>());
+
+            java.util.Map<String, Object> stats = listingService.getSellerStatistics(sellerId);
+
+            assertAll("Empty seller statistics",
+                () -> assertThat(stats.get("totalListings")).as("Total listings should be 0").isEqualTo(0L),
+                () -> assertThat(stats.get("activeListings")).as("Active listings should be 0").isEqualTo(0L),
+                () -> assertThat(stats.get("closedListings")).as("Closed listings should be 0").isEqualTo(0L),
+                () -> assertThat(stats.get("draftListings")).as("Draft listings should be 0").isEqualTo(0L)
+            );
+        }
     }
 
     // ── deleteListing ─────────────────────────────────────────────────────────
@@ -247,7 +263,7 @@ class ListingServiceTest {
         @Test
         @DisplayName("Sukses: menghapus listing tanpa bid")
         void success_deletesWithoutBid() {
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
 
             listingService.deleteListing(listingId);
 
@@ -258,7 +274,7 @@ class ListingServiceTest {
         @DisplayName("Gagal: menghapus listing dengan bid → IllegalStateException")
         void fail_hasBid_throwsIllegalState() {
             activeListing.setBidCount(1);
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
 
             assertThatThrownBy(() -> listingService.deleteListing(listingId))
                     .isInstanceOf(IllegalStateException.class);
@@ -367,7 +383,7 @@ class ListingServiceTest {
         @Test
         @DisplayName("Sukses: update data listing")
         void success_updatesData() {
-            when(listingRepository.findById(listingId)).thenReturn(Optional.of(activeListing));
+            when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
             Listing update = Listing.builder()

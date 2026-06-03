@@ -94,10 +94,11 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "listings", key = "#id")
     public Listing getListingById(UUID id) {
-        return listingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Listing not found"));
+        return listingRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new RuntimeException("Listing not found with id: " + id));
     }
 
     @Override
@@ -165,7 +166,7 @@ public class ListingServiceImpl implements ListingService {
     @Transactional
     @CacheEvict(value = {"listings", "activeListings"}, allEntries = true)
     public Listing closeListing(UUID id) {
-        Listing listing = listingRepository.findById(id)
+        Listing listing = listingRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new RuntimeException("Listing not found: " + id));
 
         if (listing.getStatus() != ListingStatus.CLOSED) {
