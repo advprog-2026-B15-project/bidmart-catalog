@@ -15,9 +15,10 @@ class JacksonConfigTest {
         JacksonConfig config = new JacksonConfig();
         Hibernate6Module module = config.hibernate6Module();
         
-        assertNotNull(module, "Hibernate6Module should not be null");
-        // Verify default configuration
-        assertFalse(module.isEnabled(Hibernate6Module.Feature.FORCE_LAZY_LOADING), 
-            "FORCE_LAZY_LOADING should be disabled by default in our config");
+        assertAll("Verify JacksonConfig",
+            () -> assertNotNull(module, "Hibernate6Module should not be null"),
+            () -> assertFalse(module.isEnabled(Hibernate6Module.Feature.FORCE_LAZY_LOADING), 
+                "FORCE_LAZY_LOADING should be disabled by default in our config")
+        );
     }
 }

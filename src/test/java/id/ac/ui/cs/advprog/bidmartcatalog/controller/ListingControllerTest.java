@@ -124,7 +124,7 @@ class ListingControllerTest {
         Page<Listing> listingPage = new PageImpl<>(listingList, PageRequest.of(0, 10), 1);
 
         // 2. Mock perilaku service
-        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(PageRequest.class)))
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(listingPage);
 
         // 3. Jalankan request dan verifikasi model attribute

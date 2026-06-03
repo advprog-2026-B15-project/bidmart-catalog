@@ -16,13 +16,7 @@ public interface ListingService {
     Listing getListingById(UUID id);
     Page<Listing> getAllListings(Pageable pageable);
     Page<Listing> getActiveListings(Pageable pageable);
-    Page<Listing> searchAndFilterListings(
-            String title,
-            List<UUID> categoryIds,
-            Double minPrice,
-            Double maxPrice,
-            ListingStatus status,
-            Pageable pageable);
+    Page<Listing> searchAndFilterListings(String title, List<UUID> categoryIds, Double minPrice, Double maxPrice, ListingStatus status, String sellerId, Pageable pageable);
     Listing publishListing(UUID id);
     Listing updateCurrentPrice(UUID id, Double newPrice);
     Listing closeListing(UUID id);

@@ -54,6 +54,10 @@ class ListingApiControllerTest {
     private static final String X_USER_ROLE = "X-User-Role";
     private static final String CURRENT_PRICE_PATH = "/current-price";
     private static final String VALIDATE_PATH = "/{id}/validate";
+    private static final String PUBLISH_PATH = "/{id}/publish";
+    private static final String ID_PATH = "/{id}";
+    private static final String IS_VALID_JSON_PATH = "$.isValid";
+    private static final String REASON_JSON_PATH = "$.reason";
     private static final String USR_1 = "usr-1";
     private static final String NOT_FOUND_MSG = "Not found";
     private static final String MOCK_MVC_MSG = "MockMvc should be injected";
@@ -307,7 +311,7 @@ class ListingApiControllerTest {
         when(listingService.getListingById(id)).thenReturn(sampleListing);
         when(listingService.updateListing(eq(id), any())).thenThrow(new IllegalStateException("Locked"));
 
-        ResultActions result = mockMvc.perform(put(API_LISTINGS + "/{id}", id)
+        ResultActions result = mockMvc.perform(put(API_LISTINGS + ID_PATH, id)
                         .header(X_USER_ID, USR_1)
                         .header(X_USER_ROLE, SELLER)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -325,7 +329,7 @@ class ListingApiControllerTest {
         when(listingService.getListingById(id)).thenReturn(sampleListing);
         when(listingService.updateListing(eq(id), any())).thenReturn(sampleListing);
 
-        ResultActions result = mockMvc.perform(put(API_LISTINGS + "/{id}", id)
+        ResultActions result = mockMvc.perform(put(API_LISTINGS + ID_PATH, id)
                         .header(X_USER_ID, USR_2406)
                         .header(X_USER_ROLE, SELLER)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -342,7 +346,7 @@ class ListingApiControllerTest {
         sampleListing.setSellerId(USR_2406);
         when(listingService.getListingById(id)).thenReturn(sampleListing);
 
-        ResultActions result = mockMvc.perform(delete(API_LISTINGS + "/{id}", id)
+        ResultActions result = mockMvc.perform(delete(API_LISTINGS + ID_PATH, id)
                         .header(X_USER_ID, USR_2406)
                         .header(X_USER_ROLE, SELLER));
         
@@ -355,7 +359,7 @@ class ListingApiControllerTest {
     @Test
     @DisplayName("GET /api/listings - with filter")
     void testGetListingsWithFilter() throws Exception {
-        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any()))
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(org.springframework.data.domain.Page.empty());
         ResultActions result = mockMvc.perform(get(API_LISTINGS));
         
@@ -498,7 +502,7 @@ class ListingApiControllerTest {
     @Test
     @DisplayName("GET /api/listings - Various Filters (Keywords)")
     void testGetAllListingsWithFiltersKeywords() throws Exception {
-        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any()))
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(sampleListing)));
 
         ResultActions result = mockMvc.perform(get(API_LISTINGS)
@@ -530,7 +534,9 @@ class ListingApiControllerTest {
         when(listingService.getListingById(id)).thenReturn(sampleListing);
         ResultActions result = mockMvc.perform(patch(API_LISTINGS + "/" + id + "/publish")
                         .header(X_USER_ID, "me"));
-        result.andExpect(status().isForbidden());
+        assertAll("Verify publish listing forbidden branch",
+            () -> result.andExpect(status().isForbidden())
+        );
     }
 
     @Test
@@ -592,7 +598,7 @@ class ListingApiControllerTest {
     void testGetAllListingsCategoryTree() throws Exception {
         UUID catId = UUID.randomUUID();
         when(categoryService.getCategoryAndSubCategoryIds(catId)).thenReturn(List.of(catId));
-        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any()))
+        when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(Page.empty());
 
         mockMvc.perform(get(API_LISTINGS).param("categoryId", catId.toString()))
@@ -630,12 +636,15 @@ class ListingApiControllerTest {
         when(listingService.getListingById(id)).thenReturn(sampleListing);
         when(listingService.updateListing(eq(id), any())).thenThrow(new RuntimeException("generic error"));
 
-        mockMvc.perform(put(API_LISTINGS + "/{id}", id)
+        ResultActions result = mockMvc.perform(put(API_LISTINGS + ID_PATH, id)
                         .header(X_USER_ID, USR_2406)
                         .header(X_USER_ROLE, SELLER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"Err\"}"))
-                .andExpect(status().isInternalServerError());
+                        .content("{\"title\":\"Err\"}"));
+        
+        assertAll("Verify update internal error branch",
+                () -> result.andExpect(status().isInternalServerError())
+        );
     }
 
     @Test
@@ -645,10 +654,13 @@ class ListingApiControllerTest {
         when(listingService.getListingById(id)).thenReturn(sampleListing);
         doThrow(new RuntimeException("generic error")).when(listingService).deleteListing(id);
 
-        mockMvc.perform(delete(API_LISTINGS + "/" + id)
+        ResultActions result = mockMvc.perform(delete(API_LISTINGS + ID_PATH, id)
                         .header(X_USER_ID, USR_2406)
-                        .header(X_USER_ROLE, SELLER))
-                .andExpect(status().isInternalServerError());
+                        .header(X_USER_ROLE, SELLER));
+        
+        assertAll("Verify delete internal error branch",
+                () -> result.andExpect(status().isInternalServerError())
+        );
     }
 
     @Test
@@ -656,8 +668,11 @@ class ListingApiControllerTest {
     void testValidateListingInternalErrorBranch() throws Exception {
         when(listingService.getListingById(id)).thenThrow(new RuntimeException("generic error"));
 
-        mockMvc.perform(get(API_LISTINGS + VALIDATE_PATH, id))
-                .andExpect(status().isInternalServerError());
+        ResultActions result = mockMvc.perform(get(API_LISTINGS + VALIDATE_PATH, id));
+        
+        assertAll("Verify validate internal error branch",
+                () -> result.andExpect(status().isInternalServerError())
+        );
     }
 
     @Test
@@ -668,10 +683,14 @@ class ListingApiControllerTest {
         created.setTitle("Null Cat");
         when(listingService.createListing(any(), any())).thenReturn(created);
 
-        mockMvc.perform(multipart(API_LISTINGS)
+        ResultActions result = mockMvc.perform(multipart(API_LISTINGS)
                         .header(X_USER_ID, USR_2406)
                         .header(X_USER_ROLE, SELLER)
-                        .param("title", "Null Cat"))
-                .andExpect(status().isCreated());
+                        .param("title", "Null Cat"));
+        
+        assertAll("Verify create null category ID branch",
+                () -> result.andExpect(status().isCreated())
+        );
     }
 }
+

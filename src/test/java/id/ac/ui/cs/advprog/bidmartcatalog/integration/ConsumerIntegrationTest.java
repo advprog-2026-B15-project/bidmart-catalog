@@ -138,6 +138,7 @@ class ConsumerIntegrationTest {
         } catch (Exception e) {
             // Expected: UnexpectedRollbackException might happen here, we ignore it to check the DB state.
             // PMD: Ignored because we verify the DB state after failure.
+            // intentionally ignored
         }
 
         Listing unchanged = listingRepository.findById(savedListing.getId()).orElseThrow();

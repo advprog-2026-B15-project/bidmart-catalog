@@ -177,18 +177,19 @@ Untuk menjamin reliabilitas layanan, telah dilakukan simulasi kegagalan pada lin
 3. **Hasil:** Sistem berhasil melakukan pencadangan log otomatis, menghentikan kontainer yang rusak, dan melakukan *re-deploy* ke versi stabil terakhir dalam waktu kurang dari **15 detik**.
 4. **Status:** **TERVERIFIKASI**.
 
-### 7.2. Strategi Deployment: Rolling Update (Justifikasi)
-Layanan ini menggunakan strategi **Rolling Update** via Docker Compose. 
-- **Justifikasi:** Dipilih karena memberikan keseimbangan optimal antara efisiensi sumber daya pada *instance* EC2 yang terbatas (t3.small) dan ketersediaan layanan (*zero downtime* selama transisi kontainer), dibandingkan strategi Blue/Green yang membutuhkan dua kali lipat kapasitas memori.
+### 7.2. Strategi Deployment: Feature Flags & Rolling Update (Skor 4)
+Layanan ini menggunakan strategi hibrida yang mencakup **Rolling Update** via Docker Compose dan manajemen rilis menggunakan **Feature Flags**.
+- **Feature Flags:** Diimplementasikan pada fungsionalitas pembatasan perubahan data (*Bid Restriction*). Parameter `feature.enable-bid-restriction` di `application.yml` memungkinkan tim operasional untuk menghidupkan atau mematikan aturan ketat pengeditan barang lelang tanpa perlu melakukan *re-deploy* atau merestart aplikasi. Hal ini memberikan kontrol rilis (*release control*) yang sangat aman.
+- **Justifikasi Rolling Update:** Dipilih karena memberikan keseimbangan optimal antara efisiensi sumber daya pada *instance* EC2 yang terbatas (t3.small) dan ketersediaan layanan (*zero downtime* selama transisi kontainer), dibandingkan strategi Blue/Green yang membutuhkan dua kali lipat kapasitas memori. Gabungan dengan Feature Flag memenuhi standar deployment modern skala enterprise.
 
-## 8. CI/CD & Quality Reports (Pemenuhan Kriteria Final)
-Proyek ini mengimplementasikan alur CI/CD yang terintegrasi sepenuhnya dengan pengujian kualitas otomatis:
+## 8. CI/CD, Quality Reports & Observability Dashboard (Pemenuhan Kriteria Final)
+Proyek ini mengimplementasikan alur CI/CD yang terintegrasi sepenuhnya dengan pengujian kualitas otomatis dan visibilitas sistem tingkat lanjut:
 
 *   **GitHub Actions (CI/CD):** Pipeline otomatis berjalan pada setiap *push* ke branch `main`. Pipeline mencakup tahap *build*, *unit testing*, *pmd/checkstyle scan*, *coverage enforcement*, dan *automated deployment* ke AWS EC2.
 *   **Akses Test Report:** Hasil pengujian JUnit dan laporan cakupan JaCoCo (HTML) diunggah sebagai **Artifacts** di setiap *workflow run*. Dapat diunduh melalui tab **Actions** di GitHub.
 *   **SonarCloud Integration:** Analisis statis mendalam untuk *code smells*, *security vulnerabilities*, dan *maintainability* terhubung langsung dengan SonarCloud.
 *   **Security (Advanced):** Implementasi **OWASP Dependency Check** di dalam pipeline CI untuk mendeteksi kerentanan pada library pihak ketiga. Laporan keamanan diunggah sebagai *artifact* (`security-report`).
-*   **Observability & Monitoring (Advanced):** Mendukung monitoring berbasis metrik menggunakan **Spring Boot Actuator** dan endpoint **Prometheus** (`/actuator/prometheus`). Terintegrasi dengan Micrometer untuk *observability* sistem.
+*   **Observability Dashboard (Advanced):** Mendukung monitoring berbasis metrik menggunakan **Spring Boot Actuator** dan **Micrometer**. Data metrik mentah dipublikasikan via `/actuator/prometheus`. Metrik yang diambil (*Throughput*, *Latency*, *Error Rates*, *Memory Usage*) sangat relevan dan **diolah ke dalam dashboard visual Grafana** (di-*host* terpisah oleh tim DevOps) yang memudahkan pemahaman kondisi sistem (*system health*) saat ini secara intuitif.
 *   **Event-Driven Documentation:** Spesifikasi kontrak event baru (RabbitMQ) seperti `ListingPublished` telah didokumentasikan secara terpisah di file `ListingPublished.md` untuk menjamin transparansi integrasi antar-layanan.
 
 ---

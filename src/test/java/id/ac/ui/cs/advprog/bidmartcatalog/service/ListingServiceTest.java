@@ -3,6 +3,7 @@ package id.ac.ui.cs.advprog.bidmartcatalog.service;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingRepository;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -51,6 +52,7 @@ class ListingServiceTest {
                 .bidCount(0)
                 .status(ListingStatus.ACTIVE)
                 .build();
+        ReflectionTestUtils.setField(listingService, "enableBidRestriction", true);
     }
 
     // ── updateCurrentPrice ────────────────────────────────────────────────────
@@ -78,11 +80,12 @@ class ListingServiceTest {
         void fail_newPriceTooLow_throwsException() {
             when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.of(activeListing));
 
-            assertThatThrownBy(() -> listingService.updateCurrentPrice(listingId, 500_000.0))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("lebih tinggi");
-
-            verify(listingRepository, never()).save(any());
+            assertAll("Verify update current price exception",
+                () -> assertThatThrownBy(() -> listingService.updateCurrentPrice(listingId, 500_000.0))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("lebih tinggi"),
+                () -> verify(listingRepository, never()).save(any())
+            );
         }
 
         @Test
@@ -369,7 +372,7 @@ class ListingServiceTest {
         @DisplayName("searchAndFilterListings")
         void testSearchAndFilterListings() {
             org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
-            listingService.searchAndFilterListings("title", null, 0.0, 100.0, ListingStatus.ACTIVE, pageable);
+            listingService.searchAndFilterListings("title", null, 0.0, 100.0, ListingStatus.ACTIVE, null, pageable);
             verify(listingRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable));
         }
     }

@@ -7,6 +7,7 @@ import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingRepository;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingSpecification;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -29,8 +30,10 @@ public class ListingServiceImpl implements ListingService {
     private final ListingRepository listingRepository;
     private final StorageService storageService;
 
-    public ListingServiceImpl(ListingRepository listingRepository, 
-                              StorageService storageService) {
+    @Value("${feature.enable-bid-restriction:true}")
+    private boolean enableBidRestriction;
+
+    public ListingServiceImpl(ListingRepository listingRepository, StorageService storageService) {
         this.listingRepository = listingRepository;
         this.storageService = storageService;
     }
@@ -115,11 +118,12 @@ public class ListingServiceImpl implements ListingService {
             Double minPrice,
             Double maxPrice,
             ListingStatus status,
+            String sellerId,
             Pageable pageable) {
 
         Specification<Listing> spec =
-                ListingSpecification.filterListings(title, categoryIds, minPrice, maxPrice, status);
-        
+                ListingSpecification.filterListings(title, categoryIds, minPrice, maxPrice, status, sellerId);
+
         return listingRepository.findAll(spec, pageable);
     }
 
@@ -174,7 +178,7 @@ public class ListingServiceImpl implements ListingService {
     public Listing updateListing(UUID id, Listing updateData) {
         Listing existingListing = getListingById(id);
 
-        if (existingListing.getBidCount() != null && existingListing.getBidCount() > 0) {
+        if (enableBidRestriction && existingListing.getBidCount() != null && existingListing.getBidCount() > 0) {
             throw new IllegalStateException(
                 "Tidak dapat mengubah listing. Penawaran (bid) sudah dilakukan.");
         }
@@ -195,7 +199,7 @@ public class ListingServiceImpl implements ListingService {
     @CacheEvict(value = {"listings", "activeListings"}, allEntries = true)
     public void deleteListing(UUID id) {
         Listing existingListing = getListingById(id);
-        if (existingListing.getBidCount() != null && existingListing.getBidCount() > 0) {
+        if (enableBidRestriction && existingListing.getBidCount() != null && existingListing.getBidCount() > 0) {
             throw new IllegalStateException(
                 "Tidak dapat menghapus listing karena sudah ada penawaran (bid).");
         }

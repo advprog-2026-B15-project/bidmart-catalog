@@ -2,6 +2,9 @@ spring:
   application:
     name: bidmartcatalog
 
+feature:
+  enable-bid-restriction: ${ENABLE_BID_RESTRICTION:true}
+
   config:
     import: optional:file:.env[.properties]
   # Konfigurasi Database menggunakan Environment Variables

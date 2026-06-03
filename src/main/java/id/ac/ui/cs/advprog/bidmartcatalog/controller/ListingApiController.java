@@ -198,16 +198,27 @@ public class ListingApiController {
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) ListingStatus status,
+            @RequestParam(required = false) String sellerId,
+            @RequestHeader(value = X_USER_ID, required = false) String headerUserId,
             @RequestHeader(value = X_USER_ROLE, required = false) String role,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        // Default ke ACTIVE jika tidak ditentukan (Katalog Publik)
-        ListingStatus filterStatus = (status != null) ? status : ListingStatus.ACTIVE;
+        // Default ke ACTIVE jika tidak ditentukan dan bukan request milik seller sendiri
+        ListingStatus filterStatus = status;
+        if (filterStatus == null) {
+            boolean isOwnerRequest = sellerId != null && sellerId.equals(headerUserId);
+            if (!isOwnerRequest) {
+                filterStatus = ListingStatus.ACTIVE;
+            }
+        }
 
-        // Security check: Hanya SELLER atau admin (internal) yang boleh melihat DRAFT
-        if (filterStatus != ListingStatus.ACTIVE && !ROLE_SELLER.equalsIgnoreCase(role)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // Security check: Hanya SELLER atau admin (internal) yang boleh melihat status selain ACTIVE jika bukan miliknya
+        if (filterStatus != ListingStatus.ACTIVE && filterStatus != null) {
+             boolean isOwnerRequest = sellerId != null && sellerId.equals(headerUserId);
+             if (!isOwnerRequest && !ROLE_SELLER.equalsIgnoreCase(role)) {
+                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+             }
         }
 
         List<UUID> categoryIds = new ArrayList<>();
@@ -218,7 +229,7 @@ public class ListingApiController {
         }
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
-                title, categoryIds, minPrice, maxPrice, filterStatus, 
+                title, categoryIds, minPrice, maxPrice, filterStatus, sellerId,
                 PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending()));
 
         Page<ListingResponseDTO> dtoPage = searchResults.map(this::convertToDTO);

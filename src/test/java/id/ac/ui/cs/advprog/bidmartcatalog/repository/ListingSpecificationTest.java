@@ -46,7 +46,8 @@ class ListingSpecificationTest {
                 List.of(UUID.randomUUID()), 
                 10.0, 
                 100.0, 
-                ListingStatus.ACTIVE
+                ListingStatus.ACTIVE,
+                null
         );
 
         spec.toPredicate(root, query, cb);
@@ -60,7 +61,7 @@ class ListingSpecificationTest {
         CriteriaQuery<?> query = mock(CriteriaQuery.class);
         CriteriaBuilder cb = mock(CriteriaBuilder.class);
         
-        Specification<Listing> spec = ListingSpecification.filterListings(null, null, null, null, null);
+        Specification<Listing> spec = ListingSpecification.filterListings(null, null, null, null, null, null);
         spec.toPredicate(root, query, cb);
         assertNotNull(spec, "Specification should not be null even with null parameters");
     }

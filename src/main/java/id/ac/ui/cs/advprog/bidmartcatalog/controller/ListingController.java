@@ -56,7 +56,7 @@ public class ListingController {
 
         // Masukkan status ke dalam pemanggilan Service
         Page<Listing> listings = listingService.searchAndFilterListings(
-                title, categoryIds, minPrice, maxPrice, status, 
+                title, categoryIds, minPrice, maxPrice, status, null,
                 PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending()));
 
         model.addAttribute("listings", listings.getContent());

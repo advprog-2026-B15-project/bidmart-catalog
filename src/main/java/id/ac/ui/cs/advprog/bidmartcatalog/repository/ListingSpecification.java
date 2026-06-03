@@ -16,10 +16,15 @@ public class ListingSpecification {
             List<UUID> categoryIds,
             Double minPrice,
             Double maxPrice,
-            ListingStatus status) { // <-- TAMBAHAN: Parameter Status
+            ListingStatus status,
+            String sellerId) { // <-- TAMBAHAN: Parameter Seller ID
 
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            if (sellerId != null && !sellerId.trim().isEmpty()) {
+                predicates.add(criteriaBuilder.equal(root.get("sellerId"), sellerId));
+            }
 
             // ====================================================
             // PERBAIKAN: Filter Status sekarang jadi opsional

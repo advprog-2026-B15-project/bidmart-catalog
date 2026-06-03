@@ -23,6 +23,7 @@ class ImageControllerTest {
 
     private MockMvc mockMvc;
     private static final String UPLOADS = "uploads";
+    private static final String DUMMY_CONTENT = "dummy content";
 
     @TempDir
     Path tempDir;
@@ -41,7 +42,7 @@ class ImageControllerTest {
     @Test
     void testServeFileJpeg() throws Exception {
         Path file = Path.of(UPLOADS, "test.jpg");
-        Files.writeString(file, "dummy content");
+        Files.writeString(file, DUMMY_CONTENT);
         
         ResultActions result = mockMvc.perform(get("/uploads/test.jpg"));
         
@@ -57,7 +58,7 @@ class ImageControllerTest {
     @Test
     void testServeFilePng() throws Exception {
         Path file = Path.of(UPLOADS, "test.png");
-        Files.writeString(file, "dummy content");
+        Files.writeString(file, DUMMY_CONTENT);
         
         ResultActions result = mockMvc.perform(get("/uploads/test.png"));
         
@@ -72,7 +73,7 @@ class ImageControllerTest {
     @Test
     void testServeFileWebp() throws Exception {
         Path file = Path.of(UPLOADS, "test.webp");
-        Files.writeString(file, "dummy content");
+        Files.writeString(file, DUMMY_CONTENT);
         
         ResultActions result = mockMvc.perform(get("/uploads/test.webp"));
         
@@ -87,7 +88,7 @@ class ImageControllerTest {
     @Test
     void testServeFileGif() throws Exception {
         Path file = Path.of(UPLOADS, "test.gif");
-        Files.writeString(file, "dummy content");
+        Files.writeString(file, DUMMY_CONTENT);
         
         ResultActions result = mockMvc.perform(get("/uploads/test.gif"));
         
@@ -102,7 +103,10 @@ class ImageControllerTest {
     @Test
     void testServeFileNotFound() throws Exception {
         assertNotNull(mockMvc, "MockMvc should be initialized");
-        mockMvc.perform(get("/uploads/nonexistent.jpg"))
-                .andExpect(status().isNotFound());
+        ResultActions result = mockMvc.perform(get("/uploads/nonexistent.jpg"));
+        
+        assertAll("Verify not found status",
+            () -> result.andExpect(status().isNotFound())
+        );
     }
 }

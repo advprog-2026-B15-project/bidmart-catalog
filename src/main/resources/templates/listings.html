@@ -121,9 +121,10 @@
                     <span th:if="${listing.bidCount > 0}" class="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium" th:text="${listing.bidCount + ' Bid'}"></span>
                 </div>
 
-                <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2" th:text="${listing.title}">Judul Barang</h3>
+                <h3 class="text-lg font-bold text-gray-900 mb-1 line-clamp-2" th:text="${listing.title}">Judul Barang</h3>
+                <p class="text-xs text-gray-500 line-clamp-2 mb-2" th:text="${listing.description != null && !listing.description.isEmpty() ? listing.description : 'Tidak ada deskripsi tersedia.'}"></p>
 
-                <div class="mt-auto pt-4">
+                <div class="mt-auto pt-2">
                     <p class="text-sm text-gray-500 mb-1">Harga Saat Ini:</p>
                     <p class="text-xl font-extrabold text-gray-900" th:text="${'Rp ' + #numbers.formatDecimal(listing.currentPrice, 0, 'COMMA', 0, 'POINT')}">Rp 0</p>
                 </div>
