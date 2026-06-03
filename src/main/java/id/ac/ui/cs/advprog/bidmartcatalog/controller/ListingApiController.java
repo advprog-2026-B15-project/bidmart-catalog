@@ -194,7 +194,7 @@ public class ListingApiController {
     @GetMapping
     public ResponseEntity<Page<ListingResponseDTO>> getAllListings(
             @RequestParam(required = false) String title,
-            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(value = "categoryId", required = false) UUID categoryId,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) ListingStatus status,
