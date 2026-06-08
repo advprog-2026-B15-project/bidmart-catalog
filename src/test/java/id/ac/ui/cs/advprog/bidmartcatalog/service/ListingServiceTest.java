@@ -290,7 +290,7 @@ class ListingServiceTest {
             Listing newListing = Listing.builder().startingPrice(100.0).build();
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-            Listing result = listingService.createListing(newListing, null);
+            Listing result = listingService.createListing(newListing, (org.springframework.web.multipart.MultipartFile[]) null);
 
             assertAll("Create draft listing properties",
                 () -> assertThat(result.getStatus()).as("Status should be DRAFT").isEqualTo(ListingStatus.DRAFT),
@@ -307,7 +307,7 @@ class ListingServiceTest {
             when(storageService.store(file)).thenReturn("/uploads/test.jpg");
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-            Listing result = listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file});
+            Listing result = listingService.createListing(newListing, file);
 
             assertAll("Create listing with files properties",
                 () -> assertThat(result.getImages()).as("Images list size should be 1").hasSize(1),
@@ -324,7 +324,7 @@ class ListingServiceTest {
             when(file.isEmpty()).thenReturn(true);
             when(listingRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-            Listing result = listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file});
+            Listing result = listingService.createListing(newListing, file);
 
             assertThat(result.getImages()).isEmpty();
         }
@@ -337,7 +337,7 @@ class ListingServiceTest {
             when(file.isEmpty()).thenReturn(false);
             when(storageService.store(file)).thenThrow(new java.io.IOException("Disk full"));
 
-            assertThatThrownBy(() -> listingService.createListing(newListing, new org.springframework.web.multipart.MultipartFile[]{file}))
+            assertThatThrownBy(() -> listingService.createListing(newListing, file))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("Gagal menyimpan file");
         }
