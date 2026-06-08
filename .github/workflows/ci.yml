@@ -94,43 +94,16 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download JAR Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app-jar
-          path: build/libs
-
-      - name: Deploy via SSH
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key:   ${{ secrets.EC2_SSH_KEY }}
-          command_timeout: 30m
-          script: |
-            mkdir -p ~/bidmart-catalog/build/libs
-            
-      - name: Copy JAR to EC2
-        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "build/libs/*.jar,Dockerfile,docker-compose.yml"
-          target: "~/bidmart-catalog"
-          strip_components: 0
-
-      - name: Restart Containers
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key:   ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/bidmart-catalog
-            docker compose down
-            docker compose up -d --build
+            git reset --hard origin/main
+            git pull origin main
+            docker compose up -d --build --remove-orphans
             docker image prune -f
+
