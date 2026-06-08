@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 @Controller
 @RequestMapping("/listings")
 public class ListingController {
@@ -82,7 +83,7 @@ public class ListingController {
 
     @PostMapping("/create")
     public String createListing(@ModelAttribute Listing listing,
-                                @RequestParam(value = "imageFiles", required = false) MultipartFile[] files) {
+                                @RequestParam(value = "imageFiles", required = false) MultipartFile... files) {
         listingService.createListing(listing, files);
         return "redirect:/listings";
     }

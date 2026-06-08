@@ -43,6 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UnitTestShouldIncludeAssert"})
 @WebMvcTest(ListingApiController.class)
 class ListingApiControllerTest {
 

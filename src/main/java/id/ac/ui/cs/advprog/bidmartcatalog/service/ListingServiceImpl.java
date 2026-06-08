@@ -25,6 +25,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ListingServiceImpl implements ListingService {
 
     private final ListingRepository listingRepository;
@@ -65,7 +66,7 @@ public class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional
-    public Listing createListing(Listing listing, MultipartFile[] files) {
+    public Listing createListing(Listing listing, MultipartFile... files) {
         listing.setStatus(ListingStatus.DRAFT);
         listing.setCurrentPrice(listing.getStartingPrice());
 

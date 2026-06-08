@@ -39,6 +39,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Locale;
+
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.AvoidLiteralsInIfCondition"})
 @RestController
 @RequestMapping("/api/listings") // Prefix /api untuk membedakan dengan rute HTML
 @Tag(name = "Listing Catalog API", description = "Endpoints untuk mengelola dan mencari katalog lelang")
@@ -98,7 +101,7 @@ public class ListingApiController {
             @RequestHeader(value = X_USER_ID, required = true) String sellerId,
             @RequestHeader(value = X_USER_ROLE, required = true) String role,
             @ModelAttribute ListingRequestDTO request,
-            @RequestParam(value = "imageFiles", required = false) org.springframework.web.multipart.MultipartFile[] files) {
+            @RequestParam(value = "imageFiles", required = false) org.springframework.web.multipart.MultipartFile... files) {
 
         if (!ROLE_SELLER.equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat membuat listing.");
@@ -159,10 +162,12 @@ public class ListingApiController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage()); // Mengembalikan 400 jika harga tidak valid
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
-            log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            if (log.isErrorEnabled()) {
+                log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -186,10 +191,12 @@ public class ListingApiController {
             Listing publishedListing = listingService.publishListing(id);
             return ResponseEntity.ok(convertToDTO(publishedListing));
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
-            log.error("Error publishing listing with id {}: {}", id, e.getMessage(), e);
+            if (log.isErrorEnabled()) {
+                log.error("Error publishing listing with id {}: {}", id, e.getMessage(), e);
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Gagal mempublikasikan listing (cek koneksi RabbitMQ): " + e.getMessage());
         }
@@ -306,10 +313,12 @@ public class ListingApiController {
             // Mengembalikan 403 Forbidden jika sudah ada bid / lelang tutup
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
-            log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            if (log.isErrorEnabled()) {
+                log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -338,10 +347,12 @@ public class ListingApiController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
-            log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            if (log.isErrorEnabled()) {
+                log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -371,10 +382,12 @@ public class ListingApiController {
             return ResponseEntity.ok(response);
 
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
-            log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            if (log.isErrorEnabled()) {
+                log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

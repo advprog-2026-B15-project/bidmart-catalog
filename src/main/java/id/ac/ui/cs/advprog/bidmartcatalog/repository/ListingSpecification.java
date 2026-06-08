@@ -38,7 +38,7 @@ public class ListingSpecification {
 
             // Filter Keyword
             if (keyword != null && !keyword.trim().isEmpty()) {
-                String searchPattern = "%" + keyword.toLowerCase() + "%";
+                String searchPattern = "%" + keyword.toLowerCase(java.util.Locale.ROOT) + "%";
                 Predicate titleMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), searchPattern);
                 Predicate descMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), searchPattern);
                 predicates.add(criteriaBuilder.or(titleMatch, descMatch));

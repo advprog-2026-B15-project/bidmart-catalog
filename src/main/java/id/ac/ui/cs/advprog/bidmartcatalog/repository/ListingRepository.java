@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public interface ListingRepository extends JpaRepository<Listing, UUID> , JpaSpecificationExecutor<Listing> {
 
     List<Listing> findBySellerId(String sellerId);

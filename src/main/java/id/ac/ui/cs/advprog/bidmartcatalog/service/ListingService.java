@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public interface ListingService {
     Map<String, Object> getSellerStatistics(String sellerId);
-    Listing createListing(Listing listing, MultipartFile[] files);
+    Listing createListing(Listing listing, MultipartFile... files);
     Listing getListingById(UUID id);
     Page<Listing> getAllListings(Pageable pageable);
     Page<Listing> getActiveListings(Pageable pageable);

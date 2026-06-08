@@ -130,6 +130,7 @@ class ConsumerIntegrationTest {
 
     @Test
     @DisplayName("BidPlaced: out-of-order bid tidak mengubah state DB")
+    @SuppressWarnings("PMD.EmptyCatchBlock")
     void bidPlaced_outOfOrderBid_doesNotUpdateDb() throws IOException {
         String eventId = UUID.randomUUID().toString();
         try {
