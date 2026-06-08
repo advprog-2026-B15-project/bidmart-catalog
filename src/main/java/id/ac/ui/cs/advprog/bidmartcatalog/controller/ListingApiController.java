@@ -262,7 +262,7 @@ public class ListingApiController {
             sort = org.springframework.data.domain.Sort.by(sortProperty).descending();
         }
 
-        log.debug("Searching listings with title={}, categoryIds={}, status={}, sortBy={}", title, categoryIds, filterStatus, sortProperty);
+        log.info("Searching listings with title={}, categoryIds={}, status={}, sortBy={}", title, categoryIds, filterStatus, sortProperty);
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
                 title, categoryIds, minPrice, maxPrice, filterStatus, sellerId,

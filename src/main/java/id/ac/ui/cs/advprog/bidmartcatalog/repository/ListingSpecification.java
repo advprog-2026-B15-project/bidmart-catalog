@@ -20,6 +20,9 @@ public class ListingSpecification {
             String sellerId) { // <-- TAMBAHAN: Parameter Seller ID
 
         return (root, query, criteriaBuilder) -> {
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                query.distinct(true);
+            }
             List<Predicate> predicates = new ArrayList<>();
 
             if (sellerId != null && !sellerId.trim().isEmpty()) {
@@ -41,9 +44,9 @@ public class ListingSpecification {
                 predicates.add(criteriaBuilder.or(titleMatch, descMatch));
             }
 
-            // Filter Kategori
+            // Filter Kategori (Gunakan Path Navigation agar lebih stabil)
             if (categoryIds != null && !categoryIds.isEmpty()) {
-                predicates.add(root.join("category").get("id").in(categoryIds));
+                predicates.add(root.get("category").get("id").in(categoryIds));
             }
 
             // Filter Harga
