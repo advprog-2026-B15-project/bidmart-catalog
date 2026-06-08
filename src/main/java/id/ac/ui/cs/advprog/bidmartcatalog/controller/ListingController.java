@@ -27,6 +27,13 @@ import java.util.UUID;
 @RequestMapping("/listings")
 public class ListingController {
 
+    private static final String CATEGORIES_ATTRIBUTE = "categories";
+    private static final String LISTING_ATTRIBUTE = "listing";
+    private static final String REDIRECT_LISTINGS = "redirect:/listings";
+    private static final String REDIRECT_LISTING_DETAIL_PREFIX = "redirect:/listings/";
+    private static final String MESSAGE_ATTRIBUTE = "message";
+    private static final String ERROR_ATTRIBUTE = "error";
+
     private final ListingService listingService;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService; // Tambahan untuk logika rekursif kategori
@@ -68,16 +75,16 @@ public class ListingController {
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("selectedStatus", status); // <-- TAMBAHAN: Kembalikan ke HTML
 
-        model.addAttribute("categories", categoryRepository.findByParentCategoryIsNull());
+        model.addAttribute(CATEGORIES_ATTRIBUTE, categoryRepository.findByParentCategoryIsNull());
 
         return "listings";
     }
 
     @GetMapping("/create")
     public String createListingForm(Model model) {
-        model.addAttribute("listing", new Listing());
+        model.addAttribute(LISTING_ATTRIBUTE, new Listing());
         // PERBAIKAN: Hanya kirim kategori utama (Root) agar rapi, tidak muncul semua secara flat
-        model.addAttribute("categories", categoryRepository.findByParentCategoryIsNull());
+        model.addAttribute(CATEGORIES_ATTRIBUTE, categoryRepository.findByParentCategoryIsNull());
         return "create-listing";
     }
 
@@ -85,24 +92,26 @@ public class ListingController {
     public String createListing(@ModelAttribute Listing listing,
                                 @RequestParam(value = "imageFiles", required = false) MultipartFile... files) {
         listingService.createListing(listing, files);
-        return "redirect:/listings";
+        return REDIRECT_LISTINGS;
     }
 
     @PostMapping("/{id}/publish")
     public String publishListing(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
             listingService.publishListing(id);
-            redirectAttributes.addFlashAttribute("message", "Listing published successfully");
+            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, 
+ "Listing published successfully");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Listing cannot be published");
+            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, 
+ "Listing cannot be published");
         }
-        return "redirect:/listings";
+        return REDIRECT_LISTINGS;
     }
 
     @GetMapping("/{id}")
     public String getListingDetail(@PathVariable UUID id, Model model) {
         Listing listing = listingService.getListingById(id);
-        model.addAttribute("listing", listing);
+        model.addAttribute(LISTING_ATTRIBUTE, listing);
         return "listing-detail";
     }
 
@@ -112,16 +121,17 @@ public class ListingController {
             Listing listing = listingService.getListingById(id);
 
             if (listing.getBidCount() != null && listing.getBidCount() > 0) {
-                redirectAttributes.addFlashAttribute("error", "Tidak bisa mengedit: Sudah ada penawaran!");
-                return "redirect:/listings/" + id;
+                redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, 
+ "Tidak bisa mengedit: Sudah ada penawaran!");
+                return REDIRECT_LISTING_DETAIL_PREFIX + id;
             }
 
-            model.addAttribute("listing", listing);
+            model.addAttribute(LISTING_ATTRIBUTE, listing);
             // PERBAIKAN: Hanya kirim kategori utama
-            model.addAttribute("categories", categoryRepository.findByParentCategoryIsNull());
+            model.addAttribute(CATEGORIES_ATTRIBUTE, categoryRepository.findByParentCategoryIsNull());
             return "edit-listing";
         } catch (RuntimeException e) {
-            return "redirect:/listings";
+            return REDIRECT_LISTINGS;
         }
     }
 
@@ -129,22 +139,26 @@ public class ListingController {
     public String updateListing(@PathVariable UUID id, @ModelAttribute Listing listingUpdate, RedirectAttributes redirectAttributes) {
         try {
             listingService.updateListing(id, listingUpdate);
-            redirectAttributes.addFlashAttribute("message", "Listing berhasil diupdate.");
+            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, 
+ "Listing berhasil diupdate.");
         } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, 
+ e.getMessage());
         }
-        return "redirect:/listings/" + id;
+        return REDIRECT_LISTING_DETAIL_PREFIX + id;
     }
 
     @PostMapping("/{id}/delete")
     public String deleteListing(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
             listingService.deleteListing(id);
-            redirectAttributes.addFlashAttribute("message", "Listing berhasil dihapus.");
-            return "redirect:/listings";
+            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, 
+ "Listing berhasil dihapus.");
+            return REDIRECT_LISTINGS;
         } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
-            return "redirect:/listings/" + id;
+            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, 
+ e.getMessage());
+            return REDIRECT_LISTING_DETAIL_PREFIX + id;
         }
     }
 }

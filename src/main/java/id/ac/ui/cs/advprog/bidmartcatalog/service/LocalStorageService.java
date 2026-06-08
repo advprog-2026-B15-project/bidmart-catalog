@@ -12,11 +12,11 @@ import java.util.UUID;
 @Service
 public class LocalStorageService implements StorageService {
 
-    private static final String uploadDir = "uploads/";
+    private static final String UPLOAD_DIR = "uploads/";
 
     @Override
     public String store(MultipartFile file) throws IOException {
-        File dir = new File(uploadDir);
+        File dir = new File(UPLOAD_DIR);
         if (!dir.exists()) dir.mkdirs();
 
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
