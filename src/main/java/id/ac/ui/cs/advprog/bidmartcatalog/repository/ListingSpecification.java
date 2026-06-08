@@ -43,7 +43,7 @@ public class ListingSpecification {
 
             // Filter Kategori
             if (categoryIds != null && !categoryIds.isEmpty()) {
-                predicates.add(root.get("category").get("id").in(categoryIds));
+                predicates.add(root.join("category").get("id").in(categoryIds));
             }
 
             // Filter Harga

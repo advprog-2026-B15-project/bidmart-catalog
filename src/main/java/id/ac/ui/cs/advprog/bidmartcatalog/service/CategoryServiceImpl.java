@@ -3,12 +3,14 @@ package id.ac.ui.cs.advprog.bidmartcatalog.service;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Category;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional(readOnly = true)
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;

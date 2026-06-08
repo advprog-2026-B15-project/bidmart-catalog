@@ -238,6 +238,9 @@ public class ListingApiController {
         if (categoryId != null) {
             try {
                 categoryIds = categoryService.getCategoryAndSubCategoryIds(categoryId);
+                if (categoryIds.isEmpty()) {
+                    log.warn("Category with ID {} found but has no subcategory IDs (including itself)", categoryId);
+                }
             } catch (RuntimeException e) {
                 // Jika kategori tidak ditemukan, kembalikan halaman kosong alih-alih 500
                 log.warn("Category with ID {} not found, returning empty page", categoryId);
@@ -258,6 +261,8 @@ public class ListingApiController {
         } else {
             sort = org.springframework.data.domain.Sort.by(sortProperty).descending();
         }
+
+        log.debug("Searching listings with title={}, categoryIds={}, status={}, sortBy={}", title, categoryIds, filterStatus, sortProperty);
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
                 title, categoryIds, minPrice, maxPrice, filterStatus, sellerId,

@@ -22,6 +22,14 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> , JpaSpe
     @EntityGraph(attributePaths = {"images", "category"})
     Page<Listing> findByStatus(ListingStatus status, Pageable pageable);
 
+    @Override
+    @EntityGraph(attributePaths = {"images", "category"})
+    Page<Listing> findAll(Pageable pageable);
+
+    @Override
+    @EntityGraph(attributePaths = {"images", "category"})
+    Page<Listing> findAll(Specification<Listing> spec, Pageable pageable);
+
     @EntityGraph(attributePaths = {"images", "category"})
     @Query("SELECT l FROM Listing l WHERE l.id = :id")
     Optional<Listing> findByIdWithDetails(@Param("id") UUID id);
