@@ -54,6 +54,9 @@ public class ListingApiController {
     private static final String ROLE_SELLER = "SELLER";
     private static final String ACCESS_DENIED_NOT_OWNER = "Akses ditolak: bukan pemilik listing.";
 
+    private static final String NOT_FOUND_KEYWORD = "not found";
+    private static final String UNEXPECTED_ERROR_LOG = "Unexpected error for listing id {}: {}";
+
     private final ListingService listingService;
     private final CategoryService categoryService;
 
@@ -162,11 +165,11 @@ public class ListingApiController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage()); // Mengembalikan 400 jika harga tidak valid
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
             if (log.isErrorEnabled()) {
-                log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+                log.error(UNEXPECTED_ERROR_LOG, id, e.getMessage(), e);
             }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
@@ -191,7 +194,7 @@ public class ListingApiController {
             Listing publishedListing = listingService.publishListing(id);
             return ResponseEntity.ok(convertToDTO(publishedListing));
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
             if (log.isErrorEnabled()) {
@@ -222,62 +225,64 @@ public class ListingApiController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
-        // Default ke ACTIVE jika tidak ditentukan dan bukan request milik seller sendiri
-        ListingStatus filterStatus = status;
-        if (filterStatus == null) {
-            boolean isOwnerRequest = sellerId != null && sellerId.equals(headerUserId);
-            if (!isOwnerRequest) {
-                filterStatus = ListingStatus.ACTIVE;
-            }
+        ListingStatus filterStatus = resolveFilterStatus(status, sellerId, headerUserId);
+
+        if (!isAuthorizedToViewStatus(filterStatus, sellerId, headerUserId, role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        // Security check: Hanya SELLER atau admin (internal) yang boleh melihat status selain ACTIVE jika bukan miliknya
-        if (filterStatus != ListingStatus.ACTIVE && filterStatus != null) {
-             boolean isOwnerRequest = sellerId != null && sellerId.equals(headerUserId);
-             if (!isOwnerRequest && !ROLE_SELLER.equalsIgnoreCase(role)) {
-                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-             }
+        List<UUID> categoryIds;
+        try {
+            categoryIds = getEffectiveCategoryIds(categoryId);
+        } catch (RuntimeException e) {
+            log.warn("Category with ID {} not found, returning empty page", categoryId);
+            return ResponseEntity.ok(Page.empty());
         }
 
-        List<UUID> categoryIds = new ArrayList<>();
+        org.springframework.data.domain.Sort sort = determineSort(sortBy, direction);
 
-        // Jika user memfilter berdasarkan kategori, ambil kategori itu DAN sub-kategorinya
-        if (categoryId != null) {
-            try {
-                categoryIds = categoryService.getCategoryAndSubCategoryIds(categoryId);
-                if (categoryIds.isEmpty()) {
-                    log.warn("Category with ID {} found but has no subcategory IDs (including itself)", categoryId);
-                }
-            } catch (RuntimeException e) {
-                // Jika kategori tidak ditemukan, kembalikan halaman kosong alih-alih 500
-                log.warn("Category with ID {} not found, returning empty page", categoryId);
-                return ResponseEntity.ok(Page.empty());
-            }
-        }
-
-        // Menentukan Sort
-        org.springframework.data.domain.Sort sort;
-        // Map "category" ke "category.name" agar bisa diurutkan berdasarkan nama kategori di DB
-        String sortProperty = sortBy;
-        if ("category".equalsIgnoreCase(sortBy)) {
-            sortProperty = "category.name";
-        }
-
-        if ("asc".equalsIgnoreCase(direction)) {
-            sort = org.springframework.data.domain.Sort.by(sortProperty).ascending();
-        } else {
-            sort = org.springframework.data.domain.Sort.by(sortProperty).descending();
-        }
-
-        log.info("Searching listings with title={}, categoryIds={}, status={}, sortBy={}", title, categoryIds, filterStatus, sortProperty);
+        log.info("Searching listings with title={}, categoryIds={}, status={}, sortBy={}",
+                title, categoryIds, filterStatus, sortBy);
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
                 title, categoryIds, minPrice, maxPrice, filterStatus, sellerId,
                 PageRequest.of(page, size, sort));
 
-        Page<ListingResponseDTO> dtoPage = searchResults.map(this::convertToDTO);
+        return ResponseEntity.ok(searchResults.map(this::convertToDTO));
+    }
 
-        return ResponseEntity.ok(dtoPage);
+    private ListingStatus resolveFilterStatus(ListingStatus status, String sellerId, String headerUserId) {
+        if (status != null) {
+            return status;
+        }
+        boolean isOwnerRequest = sellerId != null && sellerId.equals(headerUserId);
+        return isOwnerRequest ? null : ListingStatus.ACTIVE;
+    }
+
+    private boolean isAuthorizedToViewStatus(ListingStatus filterStatus, String sellerId, String headerUserId, String role) {
+        if (filterStatus == ListingStatus.ACTIVE || filterStatus == null) {
+            return true;
+        }
+        boolean isOwnerRequest = sellerId != null && sellerId.equals(headerUserId);
+        return isOwnerRequest || ROLE_SELLER.equalsIgnoreCase(role);
+    }
+
+    private List<UUID> getEffectiveCategoryIds(UUID categoryId) {
+        if (categoryId == null) {
+            return new ArrayList<>();
+        }
+        List<UUID> ids = categoryService.getCategoryAndSubCategoryIds(categoryId);
+        if (ids.isEmpty()) {
+            log.warn("Category with ID {} found but has no subcategory IDs (including itself)", categoryId);
+        }
+        return ids;
+    }
+
+    private org.springframework.data.domain.Sort determineSort(String sortBy, String direction) {
+        String sortProperty = "category".equalsIgnoreCase(sortBy) ? "category.name" : sortBy;
+        return "asc".equalsIgnoreCase(direction)
+                ? org.springframework.data.domain.Sort.by(sortProperty).ascending()
+                : org.springframework.data.domain.Sort.by(sortProperty).descending();
     }
 
     /**
@@ -313,11 +318,11 @@ public class ListingApiController {
             // Mengembalikan 403 Forbidden jika sudah ada bid / lelang tutup
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
             if (log.isErrorEnabled()) {
-                log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+                log.error(UNEXPECTED_ERROR_LOG, id, e.getMessage(), e);
             }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
@@ -347,11 +352,11 @@ public class ListingApiController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
             if (log.isErrorEnabled()) {
-                log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+                log.error(UNEXPECTED_ERROR_LOG, id, e.getMessage(), e);
             }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
@@ -382,11 +387,11 @@ public class ListingApiController {
             return ResponseEntity.ok(response);
 
         } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains("not found")) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
             if (log.isErrorEnabled()) {
-                log.error("Unexpected error for listing id {}: {}", id, e.getMessage(), e);
+                log.error(UNEXPECTED_ERROR_LOG, id, e.getMessage(), e);
             }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }

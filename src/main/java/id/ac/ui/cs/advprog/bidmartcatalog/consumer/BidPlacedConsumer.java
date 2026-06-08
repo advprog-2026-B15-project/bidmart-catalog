@@ -52,28 +52,21 @@ public class BidPlacedConsumer {
         String eventId = event.getEventId();
 
         // ── Idempotency guard ─────────────────────────────────────────────────
-        if (eventId == null || processedEventRepository.existsByEventId(eventId)) {
-            if (log.isWarnEnabled()) {
-                log.warn("[BidPlaced] Duplicate or null eventId={}, skipping.", eventId);
-            }
+        if (isDuplicateOrNull(eventId)) {
+            log.warn("[BidPlaced] Duplicate or null eventId={}, skipping.", eventId);
             channel.basicAck(deliveryTag, false);
             return;
         }
 
-
         BidPlacedEvent.Payload payload = event.getPayload();
-        if (payload == null || payload.getListingId() == null || payload.getBidAmount() == null) {
-            if (log.isErrorEnabled()) {
-                log.error("[BidPlaced] Invalid payload for eventId={}, sending to DLQ.", eventId);
-            }
+        if (isInvalidPayload(payload)) {
+            log.error("[BidPlaced] Invalid payload for eventId={}, sending to DLQ.", eventId);
             channel.basicNack(deliveryTag, false, false);
             return;
         }
 
-        if (log.isInfoEnabled()) {
-            log.info("[BidPlaced] Processing eventId={} listingId={} bidAmount={}",
-                    eventId, payload.getListingId(), payload.getBidAmount());
-        }
+        log.info("[BidPlaced] Processing eventId={} listingId={} bidAmount={}",
+                eventId, payload.getListingId(), payload.getBidAmount());
 
         try {
             // ── Update currentPrice ───────────────────────────────────────────
@@ -88,29 +81,29 @@ public class BidPlacedConsumer {
                     .build());
 
             channel.basicAck(deliveryTag, false);
-            if (log.isInfoEnabled()) {
-                log.info("[BidPlaced] Successfully processed eventId={}", eventId);
-            }
+            log.info("[BidPlaced] Successfully processed eventId={}", eventId);
 
         } catch (DataIntegrityViolationException ex) {
             // Race condition: eventId sudah diinsert oleh transaksi lain
-            if (log.isWarnEnabled()) {
-                log.warn("[BidPlaced] Race condition on eventId={}, treating as duplicate.", eventId);
-            }
+            log.warn("[BidPlaced] Race condition on eventId={}, treating as duplicate.", eventId);
             channel.basicAck(deliveryTag, false);
 
         } catch (IllegalArgumentException ex) {
             // BidAmount <= currentPrice → pesan out-of-order, kirim ke DLQ
-            if (log.isWarnEnabled()) {
-                log.warn("[BidPlaced] Out-of-order or invalid bid for eventId={}: {}", eventId, ex.getMessage());
-            }
+            log.warn("[BidPlaced] Out-of-order or invalid bid for eventId={}: {}", eventId, ex.getMessage());
             channel.basicNack(deliveryTag, false, false);
 
         } catch (Exception ex) {
-            if (log.isErrorEnabled()) {
-                log.error("[BidPlaced] Unexpected error processing eventId={}: {}", eventId, ex.getMessage(), ex);
-            }
+            log.error("[BidPlaced] Unexpected error processing eventId={}: {}", eventId, ex.getMessage(), ex);
             channel.basicNack(deliveryTag, false, false);
         }
+    }
+
+    private boolean isDuplicateOrNull(String eventId) {
+        return eventId == null || processedEventRepository.existsByEventId(eventId);
+    }
+
+    private boolean isInvalidPayload(BidPlacedEvent.Payload payload) {
+        return payload == null || payload.getListingId() == null || payload.getBidAmount() == null;
     }
 }
