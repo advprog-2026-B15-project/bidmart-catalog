@@ -20,6 +20,7 @@ public class ListingResponseDTO {
     private String description;
     private String categoryName;
     private UUID categoryId;
+    private CategoryResponseDTO category;
     private List<String> imageUrls;
     private String sellerId;
     private Double startingPrice;
@@ -30,4 +31,13 @@ public class ListingResponseDTO {
     private Integer bidCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CategoryResponseDTO {
+        private UUID id;
+        private String name;
+    }
 }

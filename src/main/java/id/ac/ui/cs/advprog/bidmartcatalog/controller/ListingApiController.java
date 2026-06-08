@@ -60,12 +60,21 @@ public class ListingApiController {
     }
 
     private ListingResponseDTO convertToDTO(Listing listing) {
+        ListingResponseDTO.CategoryResponseDTO categoryDTO = null;
+        if (listing.getCategory() != null) {
+            categoryDTO = ListingResponseDTO.CategoryResponseDTO.builder()
+                    .id(listing.getCategory().getId())
+                    .name(listing.getCategory().getName())
+                    .build();
+        }
+
         return ListingResponseDTO.builder()
                 .id(listing.getId())
                 .title(listing.getTitle())
                 .description(listing.getDescription())
                 .categoryId(listing.getCategory() != null ? listing.getCategory().getId() : null)
                 .categoryName(listing.getCategory() != null ? listing.getCategory().getName() : null)
+                .category(categoryDTO)
                 .imageUrls(listing.getImages().stream().map(ListingImage::getImageUrl).collect(Collectors.toList()))
                 .sellerId(listing.getSellerId())
                 .startingPrice(listing.getStartingPrice())
@@ -202,7 +211,9 @@ public class ListingApiController {
             @RequestHeader(value = X_USER_ID, required = false) String headerUserId,
             @RequestHeader(value = X_USER_ROLE, required = false) String role,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
 
         // Default ke ACTIVE jika tidak ditentukan dan bukan request milik seller sendiri
         ListingStatus filterStatus = status;
@@ -225,12 +236,32 @@ public class ListingApiController {
 
         // Jika user memfilter berdasarkan kategori, ambil kategori itu DAN sub-kategorinya
         if (categoryId != null) {
-            categoryIds = categoryService.getCategoryAndSubCategoryIds(categoryId);
+            try {
+                categoryIds = categoryService.getCategoryAndSubCategoryIds(categoryId);
+            } catch (RuntimeException e) {
+                // Jika kategori tidak ditemukan, kembalikan halaman kosong alih-alih 500
+                log.warn("Category with ID {} not found, returning empty page", categoryId);
+                return ResponseEntity.ok(Page.empty());
+            }
+        }
+
+        // Menentukan Sort
+        org.springframework.data.domain.Sort sort;
+        // Map "category" ke "category.name" agar bisa diurutkan berdasarkan nama kategori di DB
+        String sortProperty = sortBy;
+        if ("category".equalsIgnoreCase(sortBy)) {
+            sortProperty = "category.name";
+        }
+
+        if ("asc".equalsIgnoreCase(direction)) {
+            sort = org.springframework.data.domain.Sort.by(sortProperty).ascending();
+        } else {
+            sort = org.springframework.data.domain.Sort.by(sortProperty).descending();
         }
 
         Page<Listing> searchResults = listingService.searchAndFilterListings(
                 title, categoryIds, minPrice, maxPrice, filterStatus, sellerId,
-                PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending()));
+                PageRequest.of(page, size, sort));
 
         Page<ListingResponseDTO> dtoPage = searchResults.map(this::convertToDTO);
 
