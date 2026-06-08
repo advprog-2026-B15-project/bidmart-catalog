@@ -12,7 +12,7 @@ import java.util.UUID;
 @Service
 public class LocalStorageService implements StorageService {
 
-    private final String uploadDir = "uploads/";
+    private static final String uploadDir = "uploads/";
 
     @Override
     public String store(MultipartFile file) throws IOException {

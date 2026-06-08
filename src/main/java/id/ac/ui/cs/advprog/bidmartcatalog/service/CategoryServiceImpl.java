@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.service;
 
+import id.ac.ui.cs.advprog.bidmartcatalog.exception.CategoryNotFoundException;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Category;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
@@ -22,14 +23,14 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public Category getCategoryById(UUID id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new CategoryNotFoundException(id));
     }
 
     @Override
     public List<UUID> getCategoryAndSubCategoryIds(UUID parentCategoryId) {
         List<UUID> ids = new ArrayList<>();
         Category category = categoryRepository.findById(parentCategoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new CategoryNotFoundException(parentCategoryId));
 
         collectCategoryIds(category, ids);
         return ids;

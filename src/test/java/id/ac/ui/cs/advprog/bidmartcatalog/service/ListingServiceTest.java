@@ -1,5 +1,7 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.service;
 
+import id.ac.ui.cs.advprog.bidmartcatalog.exception.FileStorageException;
+import id.ac.ui.cs.advprog.bidmartcatalog.exception.ListingNotFoundException;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.ListingRepository;
@@ -31,7 +33,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ListingServiceTest {
+public class ListingServiceTest {
 
     @Mock ListingRepository listingRepository;
     @Mock StorageService storageService;
@@ -89,12 +91,12 @@ class ListingServiceTest {
         }
 
         @Test
-        @DisplayName("Gagal: listing tidak ditemukan → RuntimeException")
+        @DisplayName("Gagal: listing tidak ditemukan → ListingNotFoundException")
         void fail_listingNotFound_throwsException() {
             when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> listingService.updateCurrentPrice(listingId, 1_600_000.0))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(ListingNotFoundException.class)
                     .hasMessageContaining("not found");
         }
     }
@@ -139,12 +141,12 @@ class ListingServiceTest {
         }
 
         @Test
-        @DisplayName("Gagal: listing tidak ditemukan → RuntimeException")
+        @DisplayName("Gagal: listing tidak ditemukan → ListingNotFoundException")
         void fail_listingNotFound_throwsException() {
             when(listingRepository.findByIdWithDetails(listingId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> listingService.closeListing(listingId))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(ListingNotFoundException.class)
                     .hasMessageContaining(listingId.toString());
         }
     }
@@ -338,7 +340,7 @@ class ListingServiceTest {
             when(storageService.store(file)).thenThrow(new java.io.IOException("Disk full"));
 
             assertThatThrownBy(() -> listingService.createListing(newListing, file))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(FileStorageException.class)
                     .hasMessageContaining("Gagal menyimpan file");
         }
     }

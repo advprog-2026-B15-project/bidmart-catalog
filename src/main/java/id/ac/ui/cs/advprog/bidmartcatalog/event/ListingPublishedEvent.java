@@ -19,10 +19,13 @@ import java.util.UUID;
 public class ListingPublishedEvent {
 
     private String eventId;
-    private final String eventType = "ListingPublished";
-    private final int eventVersion = 1;
+    @Builder.Default
+    private String eventType = "ListingPublished";
+    @Builder.Default
+    private int eventVersion = 1;
     private LocalDateTime occurredAt;
-    private final String source = "bidmart-catalog";
+    @Builder.Default
+    private String source = "bidmart-catalog";
     private Payload payload;
 
     @Data

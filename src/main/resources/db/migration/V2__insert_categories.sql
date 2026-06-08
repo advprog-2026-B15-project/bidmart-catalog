@@ -7,6 +7,6 @@ INSERT INTO categories (id, name, parent_id) VALUES
 
 -- Mengisi Subkategori (Hierarchy)
 INSERT INTO categories (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-222222222222', 'Laptop', '11111111-1111-1111-1111-111111111111'),
-    ('11111111-1111-1111-1111-333333333333', 'Smartphone', '11111111-1111-1111-1111-111111111111'),
-    ('22222222-2222-2222-2222-444444444444', 'Sepatu', '22222222-2222-2222-2222-222222222222');
+    ('11111111-1111-1111-1111-222222222222', 'Laptop', (SELECT id FROM categories WHERE name = 'Elektronik')),
+    ('11111111-1111-1111-1111-333333333333', 'Smartphone', (SELECT id FROM categories WHERE name = 'Elektronik')),
+    ('22222222-2222-2222-2222-444444444444', 'Sepatu', (SELECT id FROM categories WHERE name = 'Fashion & Pakaian'));

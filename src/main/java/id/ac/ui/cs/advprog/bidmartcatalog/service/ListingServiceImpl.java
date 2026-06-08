@@ -1,5 +1,7 @@
 package id.ac.ui.cs.advprog.bidmartcatalog.service;
 
+import id.ac.ui.cs.advprog.bidmartcatalog.exception.FileStorageException;
+import id.ac.ui.cs.advprog.bidmartcatalog.exception.ListingNotFoundException;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.Listing;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
@@ -85,7 +87,7 @@ public class ListingServiceImpl implements ListingService {
                     listing.getImages().add(image);
                     isPrimary = false;
                 } catch (IOException e) {
-                    throw new RuntimeException("Gagal menyimpan file gambar", e);
+                    throw new FileStorageException("Gagal menyimpan file gambar", e);
                 }
             }
         }
@@ -98,7 +100,7 @@ public class ListingServiceImpl implements ListingService {
     @Cacheable(value = "listings", key = "#id")
     public Listing getListingById(UUID id) {
         return listingRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new RuntimeException("Listing not found with id: " + id));
+                .orElseThrow(() -> new ListingNotFoundException(id));
     }
 
     @Override
@@ -163,7 +165,7 @@ public class ListingServiceImpl implements ListingService {
     @CacheEvict(value = {"listings", "activeListings"}, allEntries = true)
     public Listing closeListing(UUID id) {
         Listing listing = listingRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new RuntimeException("Listing not found: " + id));
+                .orElseThrow(() -> new ListingNotFoundException(id));
 
         if (listing.getStatus() != ListingStatus.CLOSED) {
             listing.setStatus(ListingStatus.CLOSED);
