@@ -14,8 +14,9 @@ RUN chmod +x gradlew
 # Download dependencies (cached layer)
 RUN ./gradlew dependencies --no-daemon
 
-# Copy source code and build the application
+# Copy source code and config for checkstyle
 COPY src src
+COPY config config
 RUN ./gradlew build -x test --no-daemon
 
 # Stage 2: Run stage
