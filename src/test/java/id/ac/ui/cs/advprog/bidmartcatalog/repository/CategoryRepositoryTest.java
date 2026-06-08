@@ -30,10 +30,6 @@ class CategoryRepositoryTest {
 
         // Mengisi atribut wajib (not-null) agar Hibernate tidak protes
         category.setName("Electronics");
-
-        // Catatan: Jika ada atribut lain di model Category yang wajib diisi (misal deskripsi),
-        // tambahkan juga setter-nya di sini. Contoh:
-        // category.setDescription("Kategori untuk barang elektronik");
     }
 
     @Test

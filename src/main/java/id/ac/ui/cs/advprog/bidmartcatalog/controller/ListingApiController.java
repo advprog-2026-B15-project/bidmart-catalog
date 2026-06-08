@@ -54,9 +54,6 @@ public class ListingApiController {
     private static final String ROLE_SELLER = "SELLER";
     private static final String ACCESS_DENIED_NOT_OWNER = "Akses ditolak: bukan pemilik listing.";
 
-    private static final String NOT_FOUND_KEYWORD = "not found";
-    private static final String UNEXPECTED_ERROR_LOG = "Unexpected error for listing id {}: {}";
-
     private final ListingService listingService;
     private final CategoryService categoryService;
 
@@ -110,25 +107,21 @@ public class ListingApiController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat membuat listing.");
         }
 
-        try {
-            Listing listing = new Listing();
-            listing.setTitle(request.getTitle());
-            listing.setDescription(request.getDescription());
-            listing.setStartingPrice(request.getStartingPrice());
-            listing.setReservePrice(request.getReservePrice());
-            listing.setEndTime(request.getEndTime());
-            listing.setSellerId(sellerId);
-            
-            if (request.getCategoryId() != null) {
-                Category category = categoryService.getCategoryById(request.getCategoryId());
-                listing.setCategory(category);
-            }
+        Listing listing = new Listing();
+        listing.setTitle(request.getTitle());
+        listing.setDescription(request.getDescription());
+        listing.setStartingPrice(request.getStartingPrice());
+        listing.setReservePrice(request.getReservePrice());
+        listing.setEndTime(request.getEndTime());
+        listing.setSellerId(sellerId);
 
-            Listing createdListing = listingService.createListing(listing, files);
-            return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(createdListing));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+        if (request.getCategoryId() != null) {
+            Category category = categoryService.getCategoryById(request.getCategoryId());
+            listing.setCategory(category);
         }
+
+        Listing createdListing = listingService.createListing(listing, files);
+        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(createdListing));
     }
 
     /**
@@ -137,12 +130,8 @@ public class ListingApiController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<ListingResponseDTO> getListingById(@PathVariable UUID id) {
-        try {
-            Listing listing = listingService.getListingById(id);
-            return ResponseEntity.ok(convertToDTO(listing)); 
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build(); // Mengembalikan 404 jika tidak ketemu
-        }
+        Listing listing = listingService.getListingById(id);
+        return ResponseEntity.ok(convertToDTO(listing));
     }
 
     /**
@@ -153,26 +142,13 @@ public class ListingApiController {
     @Operation(summary = "Update Harga Terkini", description = "Memperbarui current price saat ada penawaran valid yang masuk")
     @PatchMapping("/{id}/current-price")
     public ResponseEntity<?> updateListingPrice(@PathVariable UUID id, @RequestBody Map<String, Double> payload) {
-        try {
-            Double newPrice = payload.get("newPrice");
-            if (newPrice == null) {
-                return ResponseEntity.badRequest().body("Parameter 'newPrice' wajib diisi");
-            }
-
-            Listing updatedListing = listingService.updateCurrentPrice(id, newPrice);
-            return ResponseEntity.ok(convertToDTO(updatedListing));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage()); // Mengembalikan 400 jika harga tidak valid
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-            }
-            if (log.isErrorEnabled()) {
-                log.error(UNEXPECTED_ERROR_LOG, id, e.getMessage(), e);
-            }
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        Double newPrice = payload.get("newPrice");
+        if (newPrice == null) {
+            return ResponseEntity.badRequest().body("Parameter 'newPrice' wajib diisi");
         }
+
+        Listing updatedListing = listingService.updateCurrentPrice(id, newPrice);
+        return ResponseEntity.ok(convertToDTO(updatedListing));
     }
 
     /**
@@ -184,25 +160,14 @@ public class ListingApiController {
     public ResponseEntity<?> publishListing(
             @PathVariable UUID id,
             @RequestHeader(value = X_USER_ID, required = true) String sellerId) {
-        
-        try {
-            Listing existingListing = listingService.getListingById(id);
-            if (!existingListing.getSellerId().equals(sellerId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
-            }
-            
-            Listing publishedListing = listingService.publishListing(id);
-            return ResponseEntity.ok(convertToDTO(publishedListing));
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-            }
-            if (log.isErrorEnabled()) {
-                log.error("Error publishing listing with id {}: {}", id, e.getMessage(), e);
-            }
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Gagal mempublikasikan listing (cek koneksi RabbitMQ): " + e.getMessage());
+
+        Listing existingListing = listingService.getListingById(id);
+        if (!existingListing.getSellerId().equals(sellerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
         }
+
+        Listing publishedListing = listingService.publishListing(id);
+        return ResponseEntity.ok(convertToDTO(publishedListing));
     }
 
     /**
@@ -290,42 +255,29 @@ public class ListingApiController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<?> updateListing(
-            @PathVariable UUID id, 
+            @PathVariable UUID id,
             @RequestHeader(value = X_USER_ID, required = true) String sellerId,
             @RequestHeader(value = X_USER_ROLE, required = true) String role,
             @RequestBody ListingRequestDTO updateData) {
-        
+
         if (!ROLE_SELLER.equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat mengedit listing.");
         }
 
-        try {
-            Listing existingListing = listingService.getListingById(id);
-            if (!existingListing.getSellerId().equals(sellerId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
-            }
-
-            Listing listingUpdates = new Listing();
-            listingUpdates.setTitle(updateData.getTitle());
-            listingUpdates.setDescription(updateData.getDescription());
-            if (updateData.getCategoryId() != null) {
-                listingUpdates.setCategory(categoryService.getCategoryById(updateData.getCategoryId()));
-            }
-
-            Listing updatedListing = listingService.updateListing(id, listingUpdates);
-            return ResponseEntity.ok(convertToDTO(updatedListing));
-        } catch (IllegalStateException e) {
-            // Mengembalikan 403 Forbidden jika sudah ada bid / lelang tutup
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-            }
-            if (log.isErrorEnabled()) {
-                log.error(UNEXPECTED_ERROR_LOG, id, e.getMessage(), e);
-            }
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        Listing existingListing = listingService.getListingById(id);
+        if (!existingListing.getSellerId().equals(sellerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
         }
+
+        Listing listingUpdates = new Listing();
+        listingUpdates.setTitle(updateData.getTitle());
+        listingUpdates.setDescription(updateData.getDescription());
+        if (updateData.getCategoryId() != null) {
+            listingUpdates.setCategory(categoryService.getCategoryById(updateData.getCategoryId()));
+        }
+
+        Listing updatedListing = listingService.updateListing(id, listingUpdates);
+        return ResponseEntity.ok(convertToDTO(updatedListing));
     }
 
     /**
@@ -336,65 +288,42 @@ public class ListingApiController {
             @PathVariable UUID id,
             @RequestHeader(value = X_USER_ID, required = true) String sellerId,
             @RequestHeader(value = X_USER_ROLE, required = true) String role) {
-        
+
         if (!ROLE_SELLER.equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Hanya SELLER yang dapat menghapus listing.");
         }
 
-        try {
-            Listing existingListing = listingService.getListingById(id);
-            if (!existingListing.getSellerId().equals(sellerId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
-            }
-
-            listingService.deleteListing(id);
-            return ResponseEntity.ok("Listing berhasil dihapus");
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-            }
-            if (log.isErrorEnabled()) {
-                log.error(UNEXPECTED_ERROR_LOG, id, e.getMessage(), e);
-            }
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        Listing existingListing = listingService.getListingById(id);
+        if (!existingListing.getSellerId().equals(sellerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCESS_DENIED_NOT_OWNER);
         }
+
+        listingService.deleteListing(id);
+        return ResponseEntity.ok("Listing berhasil dihapus");
     }
 
     @Operation(summary = "Validasi Internal Lelang", description = "Mengecek apakah listing valid untuk menerima penawaran baru (digunakan oleh Modul Auction)")
     @GetMapping("/{id}/validate")
     public ResponseEntity<?> validateListingForBid(@PathVariable UUID id) {
-        try {
-            Listing listing = listingService.getListingById(id);
-            Map<String, Object> response = new HashMap<>();
+        Listing listing = listingService.getListingById(id);
+        Map<String, Object> response = new HashMap<>();
 
-            boolean isActive = listing.getStatus() == ListingStatus.ACTIVE;
-            boolean isTimeValid = listing.getEndTime().isAfter(LocalDateTime.now());
+        boolean isActive = listing.getStatus() == ListingStatus.ACTIVE;
+        boolean isTimeValid = listing.getEndTime().isAfter(LocalDateTime.now());
 
-            // Barang valid jika statusnya ACTIVE dan waktunya belum lewat
-            boolean isValid = isActive && isTimeValid;
+        // Barang valid jika statusnya ACTIVE dan waktunya belum lewat
+        boolean isValid = isActive && isTimeValid;
 
-            response.put("listingId", listing.getId());
-            response.put("isValid", isValid);
-            response.put("currentPrice", listing.getCurrentPrice());
-            response.put("endTime", listing.getEndTime());
+        response.put("listingId", listing.getId());
+        response.put("isValid", isValid);
+        response.put("currentPrice", listing.getCurrentPrice());
+        response.put("endTime", listing.getEndTime());
 
-            if (!isValid) {
-                response.put("reason", !isActive ? "Listing is not active" : "Auction time has ended");
-            }
-
-            return ResponseEntity.ok(response);
-
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase(Locale.ROOT).contains(NOT_FOUND_KEYWORD)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-            }
-            if (log.isErrorEnabled()) {
-                log.error(UNEXPECTED_ERROR_LOG, id, e.getMessage(), e);
-            }
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        if (!isValid) {
+            response.put("reason", !isActive ? "Listing is not active" : "Auction time has ended");
         }
+
+        return ResponseEntity.ok(response);
     }
 
     /**

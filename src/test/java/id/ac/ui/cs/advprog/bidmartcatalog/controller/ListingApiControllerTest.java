@@ -294,7 +294,7 @@ class ListingApiControllerTest {
     @Test
     @DisplayName("POST /api/listings - RuntimeException in service")
     void testCreateListingRuntimeError() throws Exception {
-        when(listingService.createListing(any(), any())).thenThrow(new RuntimeException("Error"));
+        when(listingService.createListing(any(), any())).thenThrow(new IllegalArgumentException("Error"));
         ResultActions result = mockMvc.perform(multipart(API_LISTINGS)
                         .header(X_USER_ID, USR_1)
                         .header(X_USER_ROLE, SELLER)

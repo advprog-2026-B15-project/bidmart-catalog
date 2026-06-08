@@ -16,6 +16,10 @@ import java.util.UUID;
 
 public class ListingSpecification {
 
+    private ListingSpecification() {
+        // Utility class, hide constructor
+    }
+
     public static Specification<Listing> filterListings(
             String keyword,
             List<UUID> categoryIds,
