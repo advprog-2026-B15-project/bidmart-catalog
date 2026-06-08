@@ -1,15 +1,32 @@
-# Gunakan JRE yang ringan untuk menjalankan aplikasi
-FROM eclipse-temurin:21-jre-alpine
-
+# Stage 1: Build stage
+FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
-# Ambil file JAR yang sudah dibangun oleh GitHub Actions
-# File JAR harus diletakkan di folder yang sama dengan Dockerfile sebelum build
-COPY build/libs/*.jar app.jar
+# Copy gradle files
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle.kts .
+COPY settings.gradle.kts .
 
-# Buat folder uploads jika belum ada
+# Grant execution permissions to gradlew
+RUN chmod +x gradlew
+
+# Download dependencies (cached layer)
+RUN ./gradlew dependencies --no-daemon
+
+# Copy source code and build the application
+COPY src src
+RUN ./gradlew build -x test --no-daemon
+
+# Stage 2: Run stage
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Only copy the final jar from the build stage
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Create uploads directory
 RUN mkdir -p uploads
 
 EXPOSE 8082
-
 ENTRYPOINT ["java", "-jar", "app.jar"]
