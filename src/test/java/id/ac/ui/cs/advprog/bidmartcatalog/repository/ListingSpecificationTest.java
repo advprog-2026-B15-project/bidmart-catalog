@@ -34,11 +34,12 @@ class ListingSpecificationTest {
         Path<Object> idPath = mock(Path.class);
         Path<Object> pricePath = mock(Path.class);
 
+        jakarta.persistence.criteria.Join<Object, Object> categoryJoin = mock(jakarta.persistence.criteria.Join.class);
         when(root.get("status")).thenReturn(statusPath);
         when(root.get("title")).thenReturn(titlePath);
         when(root.get("description")).thenReturn(descPath);
-        when(root.get("category")).thenReturn(categoryPath);
-        when(categoryPath.get("id")).thenReturn(idPath);
+        when(root.join("category")).thenReturn(categoryJoin);
+        when(categoryJoin.get("id")).thenReturn(idPath);
         when(root.get("currentPrice")).thenReturn(pricePath);
 
         Specification<Listing> spec = ListingSpecification.filterListings(
