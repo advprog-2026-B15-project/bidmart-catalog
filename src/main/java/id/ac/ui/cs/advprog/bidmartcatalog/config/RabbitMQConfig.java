@@ -45,6 +45,9 @@ public class RabbitMQConfig {
     public static final String DLQ_WINNER_DETERMINED = "catalog.winner-determined.dlq";
     public static final String DLX_NAME           = "auction.events.dlx";
 
+    public static final String X_DEAD_LETTER_EXCHANGE = "x-dead-letter-exchange";
+    public static final String X_DEAD_LETTER_ROUTING_KEY = "x-dead-letter-routing-key";
+
     // ── Beans: Exchange ───────────────────────────────────────────────────────
 
     @Bean
@@ -62,24 +65,24 @@ public class RabbitMQConfig {
     @Bean
     Queue bidPlacedQueue() {
         return QueueBuilder.durable(QUEUE_BID_PLACED)
-                .withArgument("x-dead-letter-exchange", DLX_NAME)
-                .withArgument("x-dead-letter-routing-key", DLQ_BID_PLACED)
+                .withArgument(X_DEAD_LETTER_EXCHANGE, DLX_NAME)
+                .withArgument(X_DEAD_LETTER_ROUTING_KEY, DLQ_BID_PLACED)
                 .build();
     }
 
     @Bean
     Queue auctionClosedQueue() {
         return QueueBuilder.durable(QUEUE_AUCTION_CLOSED)
-                .withArgument("x-dead-letter-exchange", DLX_NAME)
-                .withArgument("x-dead-letter-routing-key", DLQ_AUCTION_CLOSED)
+                .withArgument(X_DEAD_LETTER_EXCHANGE, DLX_NAME)
+                .withArgument(X_DEAD_LETTER_ROUTING_KEY, DLQ_AUCTION_CLOSED)
                 .build();
     }
 
     @Bean
     Queue winnerDeterminedQueue() {
         return QueueBuilder.durable(QUEUE_WINNER_DETERMINED)
-                .withArgument("x-dead-letter-exchange", DLX_NAME)
-                .withArgument("x-dead-letter-routing-key", DLQ_WINNER_DETERMINED)
+                .withArgument(X_DEAD_LETTER_EXCHANGE, DLX_NAME)
+                .withArgument(X_DEAD_LETTER_ROUTING_KEY, DLQ_WINNER_DETERMINED)
                 .build();
     }
 
