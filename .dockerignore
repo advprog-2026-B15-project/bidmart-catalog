@@ -1,0 +1,6 @@
+data/
+uploads/
+.git/
+.gradle/
+build/
+*.jar
