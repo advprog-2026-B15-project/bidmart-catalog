@@ -22,7 +22,7 @@ import java.io.IOException;
  *
  * Tanggung jawab:
  *   1. Idempotency check: lewati pesan jika eventId sudah diproses.
- *   2. Panggil ListingService#closeListing untuk mengubah status listing → CLOSED.
+ *   2. Panggil ListingService#closeListing untuk mengubah status listing -> CLOSED.
  *   3. Catat eventId ke tabel processed_events dalam transaksi yang sama.
  *   4. Ack pesan jika sukses; nack (tanpa requeue) jika error.
  *
@@ -50,34 +50,21 @@ public class AuctionClosedConsumer {
 
         String eventId = event.getEventId();
 
-        // ── Idempotency guard ─────────────────────────────────────────────────
-        if (eventId == null || processedEventRepository.existsByEventId(eventId)) {
-            if (log.isWarnEnabled()) {
-                log.warn("[AuctionClosed] Duplicate or null eventId={}, skipping.", eventId);
-            }
-            channel.basicAck(deliveryTag, false);
+        if (isInvalidOrDuplicate(event, channel, deliveryTag)) {
             return;
         }
 
         AuctionClosedEvent.Payload payload = event.getPayload();
-        if (payload == null || payload.getListingId() == null) {
-            if (log.isErrorEnabled()) {
-                log.error("[AuctionClosed] Invalid payload for eventId={}, sending to DLQ.", eventId);
-            }
-            channel.basicNack(deliveryTag, false, false);
-            return;
-        }
-
         if (log.isInfoEnabled()) {
             log.info("[AuctionClosed] Processing eventId={} listingId={}",
                     eventId, payload.getListingId());
         }
 
         try {
-            // ── Close listing ─────────────────────────────────────────────────
+            // -- Close listing -------------------------------------------------
             listingService.closeListing(payload.getListingId());
 
-            // ── Mark as processed ─────────────────────────────────────────────
+            // -- Mark as processed ---------------------------------------------
             processedEventRepository.save(ProcessedEvent.builder()
                     .eventId(eventId)
                     .eventType(event.getEventType())
@@ -100,5 +87,28 @@ public class AuctionClosedConsumer {
             }
             channel.basicNack(deliveryTag, false, false);
         }
+    }
+
+    private boolean isInvalidOrDuplicate(AuctionClosedEvent event, Channel channel, long deliveryTag) throws IOException {
+        String eventId = event.getEventId();
+
+        // -- Idempotency guard -------------------------------------------------
+        if (eventId == null || processedEventRepository.existsByEventId(eventId)) {
+            if (log.isWarnEnabled()) {
+                log.warn("[AuctionClosed] Duplicate or null eventId={}, skipping.", eventId);
+            }
+            channel.basicAck(deliveryTag, false);
+            return true;
+        }
+
+        AuctionClosedEvent.Payload payload = event.getPayload();
+        if (payload == null || payload.getListingId() == null) {
+            if (log.isErrorEnabled()) {
+                log.error("[AuctionClosed] Invalid payload for eventId={}, sending to DLQ.", eventId);
+            }
+            channel.basicNack(deliveryTag, false, false);
+            return true;
+        }
+        return false;
     }
 }
