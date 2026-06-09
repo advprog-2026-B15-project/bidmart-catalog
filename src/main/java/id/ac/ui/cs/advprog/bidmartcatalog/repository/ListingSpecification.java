@@ -29,8 +29,6 @@ public class ListingSpecification {
             String sellerId) {
 
         return (root, query, cb) -> {
-            applyDistinctIfNeeded(query);
-
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(getSellerPredicate(root, cb, sellerId));
             predicates.add(getStatusPredicate(root, cb, status));
@@ -43,12 +41,6 @@ public class ListingSpecification {
                     .filter(Objects::nonNull)
                     .toArray(Predicate[]::new));
         };
-    }
-
-    private static void applyDistinctIfNeeded(CriteriaQuery<?> query) {
-        if (query.getResultType() != Long.class && query.getResultType() != long.class) {
-            query.distinct(true);
-        }
     }
 
     private static Predicate getSellerPredicate(Root<Listing> root, CriteriaBuilder cb, String sellerId) {

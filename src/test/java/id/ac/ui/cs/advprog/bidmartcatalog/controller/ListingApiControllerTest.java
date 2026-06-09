@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
+import id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO;
 import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingImage;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -76,6 +77,7 @@ class ListingApiControllerTest {
     private CategoryService categoryService;
 
     private Listing sampleListing;
+    private ListingResponseDTO sampleListingDTO;
     private UUID id;
 
     @BeforeEach
@@ -86,6 +88,13 @@ class ListingApiControllerTest {
         sampleListing.setTitle("Raket Yonex");
         sampleListing.setCurrentPrice(500000.0);
         sampleListing.setStatus(ListingStatus.ACTIVE);
+
+        sampleListingDTO = ListingResponseDTO.builder()
+                .id(id)
+                .title("Raket Yonex")
+                .currentPrice(500000.0)
+                .status(ListingStatus.ACTIVE)
+                .build();
     }
 
     @Test
@@ -504,7 +513,7 @@ class ListingApiControllerTest {
     @DisplayName("GET /api/listings - Various Filters (Keywords)")
     void testGetAllListingsWithFiltersKeywords() throws Exception {
         when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of(sampleListing)));
+                .thenReturn(new PageImpl<>(List.of(sampleListingDTO)));
 
         ResultActions result = mockMvc.perform(get(API_LISTINGS)
                         .param("keyword", "test")

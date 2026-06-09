@@ -31,6 +31,15 @@ public class ListingResponseDTO {
     private Integer bidCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<ImageResponseDTO> images;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ImageResponseDTO {
+        private String imageUrl;
+    }
 
     @Data
     @Builder

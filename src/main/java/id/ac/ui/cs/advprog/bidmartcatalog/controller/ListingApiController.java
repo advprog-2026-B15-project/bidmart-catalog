@@ -71,6 +71,14 @@ public class ListingApiController {
                     .build();
         }
 
+        List<String> imageUrls = new ArrayList<>();
+        if (listing.getImages() != null) {
+            imageUrls = listing.getImages().stream()
+                    .filter(img -> img != null && img.getImageUrl() != null)
+                    .map(ListingImage::getImageUrl)
+                    .collect(Collectors.toList());
+        }
+
         return ListingResponseDTO.builder()
                 .id(listing.getId())
                 .title(listing.getTitle())
@@ -78,7 +86,7 @@ public class ListingApiController {
                 .categoryId(listing.getCategory() != null ? listing.getCategory().getId() : null)
                 .categoryName(listing.getCategory() != null ? listing.getCategory().getName() : null)
                 .category(categoryDTO)
-                .imageUrls(listing.getImages().stream().map(ListingImage::getImageUrl).collect(Collectors.toList()))
+                .imageUrls(imageUrls)
                 .sellerId(listing.getSellerId())
                 .startingPrice(listing.getStartingPrice())
                 .currentPrice(listing.getCurrentPrice())
@@ -176,7 +184,7 @@ public class ListingApiController {
      */
     @Operation(summary = "Cari Katalog Lelang", description = "Mengambil daftar barang lelang dengan filter pencarian dan hierarki kategori")
     @GetMapping
-    public ResponseEntity<Page<ListingResponseDTO>> getAllListings(
+    public ResponseEntity<?> getAllListings(
             @RequestParam(required = false) String title,
             @RequestParam(value = "categoryId", required = false) UUID categoryId,
             @RequestParam(required = false) Double minPrice,
@@ -190,30 +198,32 @@ public class ListingApiController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
-        ListingStatus filterStatus = resolveFilterStatus(status, sellerId, headerUserId);
+        System.out.println("DEBUG API: Request received for title=" + title);
 
-        if (!isAuthorizedToViewStatus(filterStatus, sellerId, headerUserId, role)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        List<UUID> categoryIds;
         try {
-            categoryIds = getEffectiveCategoryIds(categoryId);
-        } catch (RuntimeException e) {
-            log.warn("Category with ID {} not found, returning empty page", categoryId);
-            return ResponseEntity.ok(Page.empty());
+            ListingStatus filterStatus = resolveFilterStatus(status, sellerId, headerUserId);
+            
+            // Security Check: Non-ACTIVE status only for owner or SELLER role
+            if (filterStatus != null && filterStatus != ListingStatus.ACTIVE) {
+                if (!isAuthorizedToViewStatus(filterStatus, sellerId, headerUserId, role)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Akses ditolak untuk status non-ACTIVE.");
+                }
+            }
+
+            List<UUID> categoryIds = getEffectiveCategoryIds(categoryId);
+            org.springframework.data.domain.Sort sort = determineSort(sortBy, direction);
+
+            Page<ListingResponseDTO> searchResults = listingService.searchAndFilterListings(
+                    title, categoryIds, minPrice, maxPrice, filterStatus, sellerId,
+                    PageRequest.of(page, size, sort));
+
+            System.out.println("DEBUG API: Found " + searchResults.getContent().size() + " results");
+            return ResponseEntity.ok(searchResults.getContent()); // Return LIST only for testing
+        } catch (Throwable t) {
+            System.err.println("DEBUG API ERROR: " + t.getMessage());
+            t.printStackTrace();
+            return ResponseEntity.status(500).body("Critical Error: " + t.getMessage());
         }
-
-        org.springframework.data.domain.Sort sort = determineSort(sortBy, direction);
-
-        log.info("Searching listings with title={}, categoryIds={}, status={}, sortBy={}",
-                title, categoryIds, filterStatus, sortBy);
-
-        Page<Listing> searchResults = listingService.searchAndFilterListings(
-                title, categoryIds, minPrice, maxPrice, filterStatus, sellerId,
-                PageRequest.of(page, size, sort));
-
-        return ResponseEntity.ok(searchResults.map(this::convertToDTO));
     }
 
     private ListingStatus resolveFilterStatus(ListingStatus status, String sellerId, String headerUserId) {

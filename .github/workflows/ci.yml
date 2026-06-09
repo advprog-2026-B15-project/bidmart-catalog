@@ -67,9 +67,9 @@ jobs:
 
       # Upload Test Reports (JUnit & Jacoco)
       - name: Upload JUnit Test Report
-        if: always()
         uses: actions/upload-artifact@v4
         with:
+
           name: unit-test-report
           path: build/reports/tests/test/
 

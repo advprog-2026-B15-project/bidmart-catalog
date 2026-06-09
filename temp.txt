@@ -1,0 +1,45 @@
+-- SCRIPT SEEDING DATA UNTUK PROFILING (10,000 RECORDS)
+-- Jalankan query ini di Database Console (IntelliJ) atau psql
+
+-- 1. Pastikan kategori dasar tersedia (Jika belum ada)
+-- Query ini aman dijalankan ulang karena menggunakan ON CONFLICT atau pengecekan manual
+-- Namun untuk kemudahan, kita asumsikan ID dari V2__insert_categories.sql sudah ada.
+
+-- 2. Masukkan 10,000 data ke tabel listings
+-- Kita menggunakan category_id '11111111-1111-1111-1111-111111111111' (Elektronik)
+INSERT INTO listings (
+    id, 
+    title, 
+    description, 
+    category_id, 
+    seller_id, 
+    starting_price, 
+    current_price, 
+    reserve_price, 
+    end_time, 
+    status, 
+    bid_count, 
+    created_at, 
+    updated_at
+)
+SELECT 
+    gen_random_uuid(),                          -- ID Unik
+    'Produk BidMart #' || i,                   -- Judul untuk tes GIN/B-Tree Index
+    'Deskripsi lengkap untuk produk simulasi profiling ke-' || i, 
+    '11111111-1111-1111-1111-111111111111',     -- FK ke Elektronik
+    'seller-' || (i % 100),                    -- Simulasi 100 penjual berbeda
+    (random() * 5000000 + 100000)::numeric(12,2), -- Harga mulai 100rb - 5jt
+    (random() * 5000000 + 100000)::numeric(12,2), -- Harga sekarang
+    (random() * 6000000 + 500000)::numeric(12,2), -- Harga cadangan
+    now() + (random() * (interval '30 days')),  -- Waktu selesai acak dalam 30 hari
+    'ACTIVE',                                   -- Status aktif agar masuk ke filter
+    (random() * 50)::int,                       -- Jumlah bid acak
+    now() - (random() * (interval '7 days')),   -- Dibuat dalam 7 hari terakhir
+    now()
+FROM generate_series(1, 10000) s(i);
+
+-- 3. Verifikasi jumlah data
+SELECT status, COUNT(*) FROM listings GROUP BY status;
+
+-- 4. Saran Query untuk Profiling (Gunakan di k6 atau manual)
+-- SELECT * FROM listings WHERE title ILIKE '%Produk BidMart #999%' AND status = 'ACTIVE';

@@ -1,10 +1,6 @@
 spring:
   application:
     name: bidmartcatalog
-
-feature:
-  enable-bid-restriction: ${ENABLE_BID_RESTRICTION:true}
-
   config:
     import: optional:file:.env[.properties]
   # Konfigurasi Database menggunakan Environment Variables
@@ -30,22 +26,34 @@ feature:
     validate-on-migrate: false
 
   rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST:localhost}
-    port: ${SPRING_RABBITMQ_PORT:5672}
-    username: ${SPRING_RABBITMQ_USERNAME:guest}
-    password: ${SPRING_RABBITMQ_PASSWORD:guest}
-    virtual-host: ${SPRING_RABBITMQ_VHOST:/}
+    host: ${SPRING_RABBITMQ_HOST:${RABBITMQ_HOST:localhost}}
+    port: ${SPRING_RABBITMQ_PORT:${RABBITMQ_PORT:5672}}
+    username: ${SPRING_RABBITMQ_USERNAME:${RABBITMQ_USERNAME:guest}}
+    password: ${SPRING_RABBITMQ_PASSWORD:${RABBITMQ_PASSWORD:guest}}
+    virtual-host: ${SPRING_RABBITMQ_VHOST:${RABBITMQ_VHOST:/}}
     ssl:
-      enabled: ${SPRING_RABBITMQ_SSL_ENABLED:false}
+      enabled: ${SPRING_RABBITMQ_SSL_ENABLED:${RABBITMQ_SSL_ENABLED:false}}
     listener:
       simple:
         auto-startup: false
+    template:
+      mandatory: false
+
+feature:
+  enable-bid-restriction: ${ENABLE_BID_RESTRICTION:true}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus,metrics
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    id.ac.ui.cs.advprog.bidmartcatalog: DEBUG
+
   endpoint:
     health:
       show-details: always

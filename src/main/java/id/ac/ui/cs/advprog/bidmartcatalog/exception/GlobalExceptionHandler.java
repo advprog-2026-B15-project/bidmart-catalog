@@ -50,4 +50,10 @@ public class GlobalExceptionHandler {
         log.error("Uncaught exception: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
     }
+
+    @ExceptionHandler(Throwable.class)
+    public ResponseEntity<String> handleThrowable(Throwable ex) {
+        log.error("CRITICAL ERROR (Throwable): ", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("A critical server error occurred: " + ex.getMessage());
+    }
 }

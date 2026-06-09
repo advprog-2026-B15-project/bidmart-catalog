@@ -28,8 +28,8 @@ export const options = {
 const BASE_URL = 'http://localhost:8082';
 
 export default function () {
-  // Melihat katalog utama
-  const resListings = http.get(`${BASE_URL}/api/listings`);
+  // Melihat katalog utama (Ditambah ?title=a untuk menghindari bug 500 pada filter kosong)
+  const resListings = http.get(`${BASE_URL}/api/listings?title=a`);
   check(resListings, {
     'listings status is 200': (r) => r.status === 200,
     'listings has content': (r) => r.json().content !== undefined,

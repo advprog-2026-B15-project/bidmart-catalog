@@ -5,6 +5,7 @@ import id.ac.ui.cs.advprog.bidmartcatalog.model.ListingStatus;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.ListingService;
 import id.ac.ui.cs.advprog.bidmartcatalog.service.CategoryService;
 import id.ac.ui.cs.advprog.bidmartcatalog.repository.CategoryRepository;
+import id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
@@ -36,9 +37,8 @@ public class ListingController {
 
     private final ListingService listingService;
     private final CategoryRepository categoryRepository;
-    private final CategoryService categoryService; // Tambahan untuk logika rekursif kategori
+    private final CategoryService categoryService;
 
-    // Perbarui Constructor
     public ListingController(ListingService listingService, CategoryRepository categoryRepository, CategoryService categoryService) {
         this.listingService = listingService;
         this.categoryRepository = categoryRepository;
@@ -46,35 +46,31 @@ public class ListingController {
     }
 
     @GetMapping
-    public String getListings(
+    public String getAllListings(
             @RequestParam(required = false) String title,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
-            @RequestParam(required = false) ListingStatus status, // <-- TAMBAHAN: Tangkap status dari URL
+            @RequestParam(required = false) ListingStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Model model) {
 
         List<UUID> categoryIds = new ArrayList<>();
-
         if (categoryId != null) {
             categoryIds = categoryService.getCategoryAndSubCategoryIds(categoryId);
         }
 
-        // Masukkan status ke dalam pemanggilan Service
-        Page<Listing> listings = listingService.searchAndFilterListings(
+        Page<ListingResponseDTO> listings = listingService.searchAndFilterListings(
                 title, categoryIds, minPrice, maxPrice, status, null,
                 PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending()));
 
         model.addAttribute("listings", listings.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", listings.getTotalPages());
-
         model.addAttribute("title", title);
         model.addAttribute("selectedCategoryId", categoryId);
-        model.addAttribute("selectedStatus", status); // <-- TAMBAHAN: Kembalikan ke HTML
-
+        model.addAttribute("selectedStatus", status);
         model.addAttribute(CATEGORIES_ATTRIBUTE, categoryRepository.findByParentCategoryIsNull());
 
         return "listings";
@@ -83,7 +79,6 @@ public class ListingController {
     @GetMapping("/create")
     public String createListingForm(Model model) {
         model.addAttribute(LISTING_ATTRIBUTE, new Listing());
-        // PERBAIKAN: Hanya kirim kategori utama (Root) agar rapi, tidak muncul semua secara flat
         model.addAttribute(CATEGORIES_ATTRIBUTE, categoryRepository.findByParentCategoryIsNull());
         return "create-listing";
     }
@@ -99,11 +94,9 @@ public class ListingController {
     public String publishListing(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
             listingService.publishListing(id);
-            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, 
- "Listing published successfully");
+            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, "Listing published successfully");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, 
- "Listing cannot be published");
+            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, "Listing cannot be published");
         }
         return REDIRECT_LISTINGS;
     }
@@ -119,15 +112,11 @@ public class ListingController {
     public String editListingForm(@PathVariable UUID id, Model model, RedirectAttributes redirectAttributes) {
         try {
             Listing listing = listingService.getListingById(id);
-
             if (listing.getBidCount() != null && listing.getBidCount() > 0) {
-                redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, 
- "Tidak bisa mengedit: Sudah ada penawaran!");
+                redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, "Tidak bisa mengedit: Sudah ada penawaran!");
                 return REDIRECT_LISTING_DETAIL_PREFIX + id;
             }
-
             model.addAttribute(LISTING_ATTRIBUTE, listing);
-            // PERBAIKAN: Hanya kirim kategori utama
             model.addAttribute(CATEGORIES_ATTRIBUTE, categoryRepository.findByParentCategoryIsNull());
             return "edit-listing";
         } catch (RuntimeException e) {
@@ -139,11 +128,9 @@ public class ListingController {
     public String updateListing(@PathVariable UUID id, @ModelAttribute Listing listingUpdate, RedirectAttributes redirectAttributes) {
         try {
             listingService.updateListing(id, listingUpdate);
-            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, 
- "Listing berhasil diupdate.");
+            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, "Listing berhasil diupdate.");
         } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, 
- e.getMessage());
+            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, e.getMessage());
         }
         return REDIRECT_LISTING_DETAIL_PREFIX + id;
     }
@@ -152,12 +139,10 @@ public class ListingController {
     public String deleteListing(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
             listingService.deleteListing(id);
-            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, 
- "Listing berhasil dihapus.");
+            redirectAttributes.addFlashAttribute(MESSAGE_ATTRIBUTE, "Listing berhasil dihapus.");
             return REDIRECT_LISTINGS;
         } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, 
- e.getMessage());
+            redirectAttributes.addFlashAttribute(ERROR_ATTRIBUTE, e.getMessage());
             return REDIRECT_LISTING_DETAIL_PREFIX + id;
         }
     }

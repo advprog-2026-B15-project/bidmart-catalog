@@ -374,6 +374,9 @@ public class ListingServiceTest {
         @DisplayName("searchAndFilterListings")
         void testSearchAndFilterListings() {
             org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+            when(listingRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable)))
+                    .thenReturn(org.springframework.data.domain.Page.empty());
+            
             listingService.searchAndFilterListings("title", null, 0.0, 100.0, ListingStatus.ACTIVE, null, pageable);
             verify(listingRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable));
         }

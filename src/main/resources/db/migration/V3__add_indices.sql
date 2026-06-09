@@ -6,3 +6,6 @@ CREATE INDEX idx_listings_end_time ON listings(end_time);
 
 -- Optimization for search by title
 CREATE INDEX idx_listings_title ON listings(title);
+
+-- Optimization for price range filter
+CREATE INDEX idx_listings_current_price ON listings(current_price);

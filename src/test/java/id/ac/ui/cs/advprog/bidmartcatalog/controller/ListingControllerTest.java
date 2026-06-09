@@ -118,10 +118,23 @@ class ListingControllerTest {
     @DisplayName("GET /listings - Memeriksa Paginasi dan Isi Model")
     void testGetListings() throws Exception {
         // 1. Siapkan data mock untuk Page
-        Listing listing1 = Listing.builder().title("Sepatu Lari").build();
-        Listing listing2 = Listing.builder().title("Bola Voli").build();
-        List<Listing> listingList = Arrays.asList(listing1, listing2);
-        Page<Listing> listingPage = new PageImpl<>(listingList, PageRequest.of(0, 10), 1);
+        id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO.CategoryResponseDTO categoryDTO = 
+            id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO.CategoryResponseDTO.builder().name("Sports").build();
+            
+        id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO dto1 = id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO.builder()
+                .title("Sepatu Lari")
+                .category(categoryDTO)
+                .imageUrls(List.of())
+                .status(ListingStatus.ACTIVE)
+                .build();
+        id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO dto2 = id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO.builder()
+                .title("Bola Voli")
+                .category(categoryDTO)
+                .imageUrls(List.of())
+                .status(ListingStatus.ACTIVE)
+                .build();
+        List<id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO> dtoList = Arrays.asList(dto1, dto2);
+        Page<id.ac.ui.cs.advprog.bidmartcatalog.dto.ListingResponseDTO> listingPage = new PageImpl<>(dtoList, PageRequest.of(0, 10), 2);
 
         // 2. Mock perilaku service
         when(listingService.searchAndFilterListings(any(), any(), any(), any(), any(), any(), any()))
@@ -135,7 +148,7 @@ class ListingControllerTest {
         assertAll("Verify get listings success",
             () -> result.andExpect(status().isOk()),
             () -> result.andExpect(view().name("listings")),
-            () -> result.andExpect(model().attribute("listings", listingList)),
+            () -> result.andExpect(model().attribute("listings", dtoList)),
             () -> result.andExpect(model().attribute("currentPage", 0)),
             () -> result.andExpect(model().attribute("totalPages", 1))
         );

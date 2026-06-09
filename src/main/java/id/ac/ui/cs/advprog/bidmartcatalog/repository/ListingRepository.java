@@ -20,15 +20,15 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> , JpaSpe
 
     List<Listing> findBySellerId(String sellerId);
 
-    @EntityGraph(attributePaths = {"images", "category"})
+    @EntityGraph(attributePaths = {"category"})
     Page<Listing> findByStatus(ListingStatus status, Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"images", "category"})
+    @EntityGraph(attributePaths = {"category"})
     Page<Listing> findAll(Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"images", "category"})
+    @EntityGraph(attributePaths = {"category"})
     Page<Listing> findAll(Specification<Listing> spec, Pageable pageable);
 
     @EntityGraph(attributePaths = {"images", "category"})
